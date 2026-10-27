@@ -27,8 +27,13 @@ pip install -e ".[ml,dev]"
 urbanheat download --limit 2      # 2 pairs per sensor + the index, to try things out
 urbanheat download                # everything (several GB)
 urbanheat catalog                 # pairs per sensor and split, and what is on disk
+urbanheat thermal-context         # median LST of other dates per pair (Earth Engine, needs ee.project)
+urbanheat harmonize               # one dataset: 122 common bands, 60 m, all inputs (~2.2 GB)
 pytest
 ```
+
+Set your data folder and Earth Engine project in `configs/local.yaml` (copy `configs/local.example.yaml`).
+If `urbanheat` is not on your PATH, use `python -m urbanheat.cli ...`.
 
 Run commands from the repository root. Data goes to `data/` and run outputs to `runs/`; neither is in git.
 

@@ -6,22 +6,27 @@ in a pull request that all owners review.
 
 ## 1. Harmonised dataset — produced by `urbanheat.harmonize` (Members 1 + 2)
 
-One HDF5 file `data/processed/urbanheat_v<N>.h5`, all 422 pairs on a common grid:
+One HDF5 file `<processed_dir>/urbanheat_v<N>.h5` (`urbanheat harmonize`), all 422 pairs, each on its own
+CRS at 60 m (30 m pairs are 2×2-averaged), on one common wavelength grid (122 bands, 460–2340 nm, the
+10 nm wavelengths every sensor covers). Read it with `urbanheat.data.dataset.PatchDataset` / `load_pixels`.
 
 | Path | Shape / type | Meaning |
 |---|---|---|
-| `/meta` attrs | | `wavelengths_nm`, `grid_m`, input names, `version`, source index checksum |
-| `/norm/<key>_mean`, `_std` | float32 | statistics from the **train split only** |
-| `/pairs/<pair_id>/hs` | (C, H, W) float16 | reflectance resampled to the common wavelength grid |
-| `/pairs/<pair_id>/ls` | (9, H, W) float32 | `LS_INPUTS` |
+| file attrs | | `wavelengths_nm`, `grid_m`, `version`, `split_column`, `index_md5`, `inputs` (JSON of channel names) |
+| `/norm/<key>_mean`, `_std` | float32 | `hs, ls, env, thermal, met, lst, lst_anom`; **train split only** |
+| `/pairs/<pair_id>/hs` | (122, H, W) float16 | reflectance (0–1) on the common wavelength grid |
+| `/pairs/<pair_id>/ls` | (9, H, W) float32 | `LS_INPUTS` (Landsat bands + NDVI, NDBI, MNDWI) |
 | `/pairs/<pair_id>/env` | (3, H, W) float32 | `ENV_INPUTS` |
+| `/pairs/<pair_id>/thermal` | (1, H, W) float32 | thermal context, °C (section 1b) |
 | `/pairs/<pair_id>/met` | (6,) float32 | `MET_INPUTS` (ERA5 at the Landsat overpass) |
-| `/pairs/<pair_id>/landcover` | (H, W) uint8 | ESA WorldCover class |
-| `/pairs/<pair_id>/lst_c` | (H, W) float32 | Landsat LST, deg C (NaN where invalid) |
-| `/pairs/<pair_id>/valid` | (H, W) uint8 | 1 = usable pixel |
-| `/pairs/<pair_id>` attrs | | sensor, cell_id, climate_group, date, split, transform, crs |
+| `/pairs/<pair_id>/landcover` | (H, W) uint8 | ESA WorldCover class (2×2 mode) |
+| `/pairs/<pair_id>/lst_c` | (H, W) float32 | Landsat LST of clear pixels, °C (target) |
+| `/pairs/<pair_id>/valid` | (H, W) uint8 | 1 = every input and the target are present |
+| `/pairs/<pair_id>` attrs | | sensor, cell_id, climate_group, profile, split, block_1deg, landsat_scene, landsat_date, `lst_median_c`, n_valid, transform, crs |
+| `/pixels/*` | (N, …) | random valid pixels per pair for RF / XGBoost, incl. `lst_c` and `lst_anom` |
 
 `pair_id` = `<SENSOR>_<pair_no>`, e.g. `EMIT_12`. Splits come from Member 1's `split` column (by cell).
+Anomaly target = `lst_c − lst_median_c` (the pair's median over valid pixels): the surface effect without the day's weather.
 
 ## 1b. Thermal context layer — produced by `urbanheat thermal-context` (Member 1 work)
 

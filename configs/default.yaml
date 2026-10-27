@@ -19,11 +19,14 @@ thermal_context:                   # median LST of OTHER Landsat dates, input of
   max_scene_cloud: 70              # scene-level prefilter (%); pixels are masked with QA_PIXEL anyway
 
 harmonize:
-  grid_m: 60                       # common pixel size for all sensors (EMIT native)
-  wl_min_nm: 420
+  version: 1                       # output: <processed_dir>/urbanheat_v<version>.h5
+  grid_m: 60                       # common pixel size for all sensors (EMIT native); 30 m pairs are 2x2-averaged
+  wl_min_nm: 420                   # candidate wavelengths; only those EVERY sensor covers are kept
   wl_max_nm: 2400
   wl_step_nm: 10
-  drop_ranges_nm: [[1340, 1460], [1790, 1960]]   # water-vapour absorption
+  max_gap_nm: 25                   # interpolate only between source bands at most this far apart (drops water-vapour gaps)
+  min_valid_frac: 0.75             # a 60 m pixel needs >= 75 % clear 30 m pixels
+  pixels_per_pair: 2000            # random valid pixels per pair in the pixel table (RF / XGBoost)
 
 target:
   kind: anomaly                    # anomaly = LST - scene median (surface effect); absolute = LST in deg C

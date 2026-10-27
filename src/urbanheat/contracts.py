@@ -9,6 +9,7 @@ HS = "hs"            # hyperspectral reflectance on the common wavelength grid
 LS = "ls"            # Landsat blue, green, red, nir, swir1, swir2, NDVI, NDBI, MNDWI
 ENV = "env"          # elevation_m, slope_deg, built_share
 MET = "met"          # (B, 6) weather at the Landsat overpass
+THERMAL = "thermal"  # (B, 1, H, W) thermal context: median LST of other dates (never the target date)
 SENSOR = "sensor"    # (B,) int: index into SENSORS
 MASK = "mask"        # (B, H, W) bool, valid pixels
 
@@ -25,7 +26,7 @@ class HeatModel(Protocol):
     """What Member 2 trains, Member 3 compresses and Member 4 explains and serves."""
 
     name: str
-    inputs: list[str]          # subset of HS, LS, ENV, MET, SENSOR the model reads
+    inputs: list[str]          # subset of HS, LS, ENV, MET, THERMAL, SENSOR the model reads
     target: str                # "anomaly" or "absolute" (deg C)
 
     def predict(self, batch: dict[str, np.ndarray]) -> np.ndarray:

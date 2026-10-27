@@ -130,6 +130,18 @@ def cmd_thermal_context(cfg, args):
     print(f"failed: {failed or 'none'}  |  summary: {summary_file}")
 
 
+def cmd_harmonize(cfg, args):
+    from urbanheat.harmonize.build import build
+
+    out, table = build(cfg, workers=args.workers)
+    print(f"\nwrote {out} ({out.stat().st_size / 1e9:.2f} GB)")
+    print(table.groupby(["sensor", "split"]).agg(pairs=("pair_id", "size"), valid_px=("n_valid", "sum"))
+          .unstack(fill_value=0).to_string())
+    empty = table[table.n_valid == 0]
+    if len(empty):
+        print(f"{len(empty)} pairs have no valid pixel at {cfg['harmonize']['grid_m']} m:", ", ".join(empty.pair_id))
+
+
 def rasterio_bounds(profile):
     t, w, h = profile["transform"], profile["width"], profile["height"]
     xs, ys = (t.c, t.c + t.a * w), (t.f, t.f + t.e * h)
@@ -157,6 +169,10 @@ def main(argv=None):
     t.add_argument("--workers", type=int, default=6)
     t.add_argument("--overwrite", action="store_true", help="recompute pairs already done")
     t.set_defaults(func=cmd_thermal_context)
+
+    h = sub.add_parser("harmonize", help="build the common dataset (all sensors, one band set, one grid)")
+    h.add_argument("--workers", type=int, default=4)
+    h.set_defaults(func=cmd_harmonize)
 
     args = ap.parse_args(argv)
     args.func(load_config(args.config), args)
