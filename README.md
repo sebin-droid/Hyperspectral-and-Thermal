@@ -66,6 +66,7 @@ object with `predict(batch)` (for example a trivial model that returns the scene
 | [member2/01_dataset_overview](notebooks/member2/01_dataset_overview.ipynb) | harmonised dataset: splits, band grid, sensor agreement, variance split, a training patch |
 | [member2/02_baselines](notebooks/member2/02_baselines.ipynb) | Ridge / RF / XGBoost; what hyperspectral and thermal context add (ablation), per climate and sensor |
 | [member2/03_drivers](notebooks/member2/03_drivers.ipynb) | what drives urban heat: SHAP ranking, effect sizes in °C, by climate, "why is this spot hot" maps |
+| [member2/04_cnn_fusion](notebooks/member2/04_cnn_fusion.ipynb) | landsat / spectral / thermal / fusion CNNs vs XGBoost on the same test pixels; efficiency for Member 3 |
 
 ## Honest use
 
