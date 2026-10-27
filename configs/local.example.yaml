@@ -3,4 +3,8 @@ data:
   raw_dir: D:/urbanheat-data/raw
   index_file: D:/urbanheat-data/raw/FINAL-DATASET/dataset_index.csv
   processed_dir: D:/urbanheat-data/processed
+  derived_dir: D:/urbanheat-data/derived
 runs_dir: D:/urbanheat-data/runs
+
+ee:
+  project: your-earth-engine-project-id   # shown at code.earthengine.google.com; run `earthengine authenticate` once

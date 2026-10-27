@@ -23,6 +23,19 @@ One HDF5 file `data/processed/urbanheat_v<N>.h5`, all 422 pairs on a common grid
 
 `pair_id` = `<SENSOR>_<pair_no>`, e.g. `EMIT_12`. Splits come from Member 1's `split` column (by cell).
 
+## 1b. Thermal context layer — produced by `urbanheat thermal-context` (Member 1 work)
+
+`<derived_dir>/thermal_context/<rel_dir>/thermal_context.tif`, on the pair's own grid (same CRS, transform, size):
+
+| Band | Meaning |
+|---|---|
+| 1 `lst_context_c` | median Landsat 8/9 LST (°C) of clear pixels in the same season (±60 days of year, 2013–2025) |
+| 2 `n_obs` | number of clear observations behind the median |
+
+Scenes within ±16 days of the pair's Landsat date are excluded, so the target never leaks into the input.
+`thermal_context/summary.csv` holds per-pair QC: `n_scenes, coverage, median_n_obs, context_mean_c,
+target_mean_c, r_with_target`. Settings: `thermal_context` in `configs/default.yaml`.
+
 ## 2. Model — produced by Member 2, consumed by Members 3 and 4
 
 Every model implements `HeatModel.predict(batch) -> (B, H, W) LST in °C` and is saved as

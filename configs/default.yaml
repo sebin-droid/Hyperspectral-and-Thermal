@@ -4,7 +4,19 @@ data:
   raw_dir: data/raw                                  # mirror of the Drive layout (rel_dir of dataset_index.csv)
   index_file: data/raw/FINAL-DATASET/dataset_index.csv
   processed_dir: data/processed                      # harmonised dataset (docs/CONTRACTS.md section 1)
+  derived_dir: data/derived                          # layers we add per pair (thermal context, ...)
   sensors: [EMIT, ENMAP, HYPERION]
+
+ee:
+  project: null                    # your Earth Engine cloud project; set it in configs/local.yaml
+
+thermal_context:                   # median LST of OTHER Landsat dates, input of the thermal branch
+  collections: [LANDSAT/LC08/C02/T1_L2, LANDSAT/LC09/C02/T1_L2]
+  start: "2013-04-01"
+  end: "2025-12-31"
+  doy_window: 60                   # same season: +-60 days of the year around the pair's Landsat date
+  exclude_days: 16                 # leave out scenes within +-16 days of that date (the target and its weather)
+  max_scene_cloud: 70              # scene-level prefilter (%); pixels are masked with QA_PIXEL anyway
 
 harmonize:
   grid_m: 60                       # common pixel size for all sensors (EMIT native)
