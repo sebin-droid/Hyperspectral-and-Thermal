@@ -1,6 +1,6 @@
 # data and run outputs never go into git (see README: data/, runs/)
-data/
-runs/
+/data/
+/runs/
 configs/local.yaml
 *.part
 *.h5
