@@ -64,6 +64,8 @@ object with `predict(batch)` (for example a trivial model that returns the scene
 |---|---|
 | [member1/01_thermal_context_qc](notebooks/member1/01_thermal_context_qc.ipynb) | thermal context layer: coverage, observations, match with the target |
 | [member2/01_dataset_overview](notebooks/member2/01_dataset_overview.ipynb) | harmonised dataset: splits, band grid, sensor agreement, variance split, a training patch |
+| [member2/02_baselines](notebooks/member2/02_baselines.ipynb) | Ridge / RF / XGBoost; what hyperspectral and thermal context add (ablation), per climate and sensor |
+| [member2/03_drivers](notebooks/member2/03_drivers.ipynb) | what drives urban heat: SHAP ranking, effect sizes in °C, by climate, "why is this spot hot" maps |
 
 ## Honest use
 
