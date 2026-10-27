@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "urbanheat"
+version = "0.1.0"
+description = "Explain and mitigate urban surface heat with hyperspectral + thermal remote sensing"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "pyyaml>=6.0",
+    "requests>=2.31",
+    "rasterio>=1.3",
+    "h5py>=3.9",
+]
+
+[project.optional-dependencies]
+ml = ["torch>=2.2", "xgboost>=2.0", "scikit-learn>=1.3", "shap>=0.44"]
+efficient = ["onnx>=1.15", "onnxruntime>=1.17", "fvcore>=0.1.5"]
+app = ["fastapi>=0.110", "uvicorn>=0.29"]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[project.scripts]
+urbanheat = "urbanheat.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120

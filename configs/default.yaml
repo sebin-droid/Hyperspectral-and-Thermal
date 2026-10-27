@@ -1,0 +1,23 @@
+# Shared settings. Override per run with: urbanheat --config configs/my.yaml ...
+data:
+  drive_root_id: 1VH0LzmGCy1uxFmo22gBQTgkJ2fPcj9xr   # MEMBER1___PREPROCESSING (shared by link)
+  raw_dir: data/raw                                  # mirror of the Drive layout (rel_dir of dataset_index.csv)
+  index_file: data/raw/FINAL-DATASET/dataset_index.csv
+  processed_dir: data/processed                      # harmonised dataset (docs/CONTRACTS.md section 1)
+  sensors: [EMIT, ENMAP, HYPERION]
+
+harmonize:
+  grid_m: 60                       # common pixel size for all sensors (EMIT native)
+  wl_min_nm: 420
+  wl_max_nm: 2400
+  wl_step_nm: 10
+  drop_ranges_nm: [[1340, 1460], [1790, 1960]]   # water-vapour absorption
+
+target:
+  kind: anomaly                    # anomaly = LST - scene median (surface effect); absolute = LST in deg C
+
+split:
+  column: split                    # Member 1's split by cell; stricter alternative: block_1deg
+  seed: 42
+
+runs_dir: runs

@@ -1,0 +1,6 @@
+# Copy to configs/local.yaml (ignored by git) and point the paths at a disk with plenty of free space.
+data:
+  raw_dir: D:/urbanheat-data/raw
+  index_file: D:/urbanheat-data/raw/FINAL-DATASET/dataset_index.csv
+  processed_dir: D:/urbanheat-data/processed
+runs_dir: D:/urbanheat-data/runs

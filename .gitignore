@@ -1,0 +1,17 @@
+# data and run outputs never go into git (see README: data/, runs/)
+data/
+runs/
+configs/local.yaml
+*.part
+*.h5
+*.tif
+*.onnx
+*.pt
+
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+.env
