@@ -15,6 +15,9 @@ VARIANTS = {
     "spectral_cnn": dict(surface=["hs", "ls", "env"], thermal=False),
     "thermal_cnn": dict(surface=[], thermal=True),
     "fusion_cnn": dict(surface=["hs", "ls", "env"], thermal=True),
+    # hyperspectral reduced to its top principal components first (fixed projection fitted on train pixels)
+    "spectral_pca_cnn": dict(surface=["hs", "ls", "env"], thermal=False, pca=True),
+    "fusion_pca_cnn": dict(surface=["hs", "ls", "env"], thermal=True, pca=True),
 }
 CHANNELS = {"hs": 122, "ls": 9, "env": 3, "thermal": 1}
 
@@ -44,10 +47,18 @@ class Branch(nn.Module):
 
 
 class HeatCNN(nn.Module):
-    def __init__(self, variant="fusion_cnn", width=64, thermal_width=32, sensor_dim=8, channels=CHANNELS):
+    def __init__(self, variant="fusion_cnn", width=64, thermal_width=32, sensor_dim=8, channels=CHANNELS,
+                 hs_proj=None):
         super().__init__()
         v = VARIANTS[variant]
         self.variant, self.surface_keys, self.use_thermal = variant, v["surface"], v["thermal"]
+        if v.get("pca"):
+            if hs_proj is None:
+                raise ValueError(f"{variant} needs hs_proj (k x 122 PCA components, see spectral_pca)")
+            self.register_buffer("hs_proj", torch.as_tensor(hs_proj, dtype=torch.float32))
+            channels = {**channels, "hs": self.hs_proj.shape[0]}
+        else:
+            self.hs_proj = None
         feats = sensor_dim
         if self.surface_keys:
             self.surface = Branch(sum(channels[k] for k in self.surface_keys), width)
@@ -63,11 +74,29 @@ class HeatCNN(nn.Module):
         b, _, h, w = any_x.shape
         parts = []
         if self.surface_keys:
-            parts.append(self.surface(torch.cat([batch[k] for k in self.surface_keys], 1)))
+            x = {k: batch[k] for k in self.surface_keys}
+            if self.hs_proj is not None:
+                x["hs"] = torch.einsum("kc,bchw->bkhw", self.hs_proj.to(x["hs"].dtype), x["hs"])
+            parts.append(self.surface(torch.cat([x[k] for k in self.surface_keys], 1)))
         if self.use_thermal:
             parts.append(self.thermal(batch["thermal"]))
         parts.append(self.sensor(batch["sensor"])[:, :, None, None].expand(-1, -1, h, w))
         return self.head(torch.cat(parts, 1))[:, 0]                    # concatenation fusion -> (B, H, W)
+
+
+def spectral_pca(path, k=16):
+    """(k, 122) PCA components of the normalised hyperspectral bands, fitted on train pixels only,
+    and the share of variance each keeps."""
+    import h5py
+    import numpy as np
+    from sklearn.decomposition import PCA
+    from urbanheat.data.dataset import load_pixels
+
+    px = load_pixels(path, "train")
+    with h5py.File(path, "r") as f:
+        mean, std = f["norm"]["hs_mean"][:], f["norm"]["hs_std"][:]
+    pca = PCA(k, random_state=0).fit((px["hs"] - mean) / std)
+    return pca.components_.astype("float32"), pca.explained_variance_ratio_
 
 
 def count_params(model):

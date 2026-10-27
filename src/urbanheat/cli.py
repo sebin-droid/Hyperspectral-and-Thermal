@@ -142,6 +142,85 @@ def cmd_harmonize(cfg, args):
         print(f"{len(empty)} pairs have no valid pixel at {cfg['harmonize']['grid_m']} m:", ", ".join(empty.pair_id))
 
 
+def cmd_change(cfg, args):
+    import ee
+    import pandas as pd
+    from urbanheat.change import gee
+
+    if not cfg["ee"]["project"]:
+        raise SystemExit("set ee.project in configs/local.yaml (your Earth Engine cloud project)")
+    ee.Initialize(project=cfg["ee"]["project"])
+    ccfg = cfg["change"]
+    years = list(range(ccfg["years"][0], ccfg["years"][1] + 1))
+    idx = pd.read_csv(cfg["data"]["index_file"])
+    cells = idx.groupby("cell_id").agg(lon=("cell_lon", "first"), lat=("cell_lat", "first"),
+                                       climate_group=("climate_group", "first")).reset_index()
+    if args.cells:
+        cells = cells[cells.cell_id.isin(args.cells)]
+    if args.limit:
+        cells = cells.head(args.limit)
+    if args.transitions:
+        return change_transitions(ee, gee, cfg, cells, years, args)
+    out = Path(cfg["data"]["derived_dir"]) / "change" / "cell_year.csv"
+    done = pd.read_csv(out) if out.exists() and not args.overwrite else pd.DataFrame(columns=["cell_id"])
+    todo = cells[~cells.cell_id.isin(done.cell_id)]
+    print(f"{len(cells)} cells, {len(todo)} to do, years {years[0]}-{years[-1]}")
+
+    def run(c):
+        rows, start = gee.cell_series(ee, c.lon, c.lat, years, ccfg)
+        return [dict(cell_id=c.cell_id, climate_group=c.climate_group, hot_season_start_month=start, **r) for r in rows]
+
+    new, failed = [], []
+    with ThreadPoolExecutor(args.workers) as ex:
+        futures = {ex.submit(run, c): c.cell_id for c in todo.itertuples()}
+        for j, f in enumerate(futures, 1):
+            try:
+                new += f.result()
+            except Exception as e:
+                failed.append(futures[f])
+                print(f"  FAIL {futures[f]}: {str(e)[:200]}")
+            if j % 20 == 0 or j == len(futures):
+                print(f"{j}/{len(futures)} cells")
+                if new:
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    pd.concat([done, pd.DataFrame(new)]).to_csv(out, index=False)
+    t = pd.concat([done, pd.DataFrame(new)])
+    if len(t):
+        t["suhi_c"] = t.lst_built_c - t.lst_rural_c
+        out.parent.mkdir(parents=True, exist_ok=True)
+        t.to_csv(out, index=False)
+    print(f"failed: {failed or 'none'} | {out}")
+
+
+def change_transitions(ee, gee, cfg, cells, years, args):
+    """LST change per land-cover transition per cell, first 3 vs last 3 years (needs cell_year.csv for the season)."""
+    import pandas as pd
+
+    root = Path(cfg["data"]["derived_dir"]) / "change"
+    season = pd.read_csv(root / "cell_year.csv").groupby("cell_id").hot_season_start_month.first()
+    cells = cells[cells.cell_id.isin(season.dropna().index)]
+    early, late = years[:3], years[-3:]
+
+    def run(c):
+        r = gee.transition_warming(ee, c.lon, c.lat, int(season[c.cell_id]), early, late, cfg["change"])
+        return dict(cell_id=c.cell_id, climate_group=c.climate_group, early=f"{early[0]}-{early[-1]}",
+                    late=f"{late[0]}-{late[-1]}", **r)
+
+    rows, failed = [], []
+    with ThreadPoolExecutor(args.workers) as ex:
+        futures = {ex.submit(run, c): c.cell_id for c in cells.itertuples()}
+        for j, f in enumerate(futures, 1):
+            try:
+                rows.append(f.result())
+            except Exception as e:
+                failed.append(futures[f])
+                print(f"  FAIL {futures[f]}: {str(e)[:200]}")
+            if j % 50 == 0 or j == len(futures):
+                print(f"{j}/{len(futures)} cells")
+    pd.DataFrame(rows).to_csv(root / "transitions.csv", index=False)
+    print(f"failed: {failed or 'none'} | {root / 'transitions.csv'}")
+
+
 def rasterio_bounds(profile):
     t, w, h = profile["transform"], profile["width"], profile["height"]
     xs, ys = (t.c, t.c + t.a * w), (t.f, t.f + t.e * h)
@@ -173,6 +252,15 @@ def main(argv=None):
     h = sub.add_parser("harmonize", help="build the common dataset (all sensors, one band set, one grid)")
     h.add_argument("--workers", type=int, default=4)
     h.set_defaults(func=cmd_harmonize)
+
+    ch = sub.add_parser("change", help="green / built / water area and heat island per cell and year (Earth Engine)")
+    ch.add_argument("--cells", nargs="+", help="only these cell_ids")
+    ch.add_argument("--limit", type=int, help="only the first N cells (quick test)")
+    ch.add_argument("--workers", type=int, default=6)
+    ch.add_argument("--overwrite", action="store_true", help="recompute cells already done")
+    ch.add_argument("--transitions", action="store_true",
+                    help="LST change per land-cover transition (green->built, ...), first vs last 3 years")
+    ch.set_defaults(func=cmd_change)
 
     args = ap.parse_args(argv)
     args.func(load_config(args.config), args)

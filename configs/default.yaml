@@ -28,6 +28,12 @@ harmonize:
   min_valid_frac: 0.75             # a 60 m pixel needs >= 75 % clear 30 m pixels
   pixels_per_pair: 2000            # random valid pixels per pair in the pixel table (RF / XGBoost)
 
+change:                            # land cover + heat per cell and year (urbanheat change)
+  years: [2016, 2025]              # first and last year (Dynamic World starts mid-2015)
+  cell_m: 7700                     # Member 1's cell: ~7.7 km square around the cell centre
+  ring_inner_m: 1000               # rural reference ring 1-6 km outside the cell
+  ring_outer_m: 6000
+
 target:
   kind: anomaly                    # anomaly = LST - scene median (surface effect); absolute = LST in deg C
 

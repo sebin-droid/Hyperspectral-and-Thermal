@@ -29,6 +29,8 @@ urbanheat download                # everything (several GB)
 urbanheat catalog                 # pairs per sensor and split, and what is on disk
 urbanheat thermal-context         # median LST of other dates per pair (Earth Engine, needs ee.project)
 urbanheat harmonize               # one dataset: 122 common bands, 60 m, all inputs (~2.2 GB)
+urbanheat change                  # land cover + heat island per city and year (Earth Engine)
+urbanheat change --transitions    # warming of green -> built etc. vs unchanged pixels
 pytest
 ```
 
@@ -63,10 +65,12 @@ object with `predict(batch)` (for example a trivial model that returns the scene
 | Notebook | Shows |
 |---|---|
 | [member1/01_thermal_context_qc](notebooks/member1/01_thermal_context_qc.ipynb) | thermal context layer: coverage, observations, match with the target |
+| [member1/02_change](notebooks/member1/02_change.ipynb) | green / built-up / water change 2016–2025 for 281 cities; heat island; warming from green → built (pixel-level) |
 | [member2/01_dataset_overview](notebooks/member2/01_dataset_overview.ipynb) | harmonised dataset: splits, band grid, sensor agreement, variance split, a training patch |
 | [member2/02_baselines](notebooks/member2/02_baselines.ipynb) | Ridge / RF / XGBoost; what hyperspectral and thermal context add (ablation), per climate and sensor |
 | [member2/03_drivers](notebooks/member2/03_drivers.ipynb) | what drives urban heat: SHAP ranking, effect sizes in °C, by climate, "why is this spot hot" maps |
 | [member2/04_cnn_fusion](notebooks/member2/04_cnn_fusion.ipynb) | landsat / spectral / thermal / fusion CNNs vs XGBoost on the same test pixels; efficiency for Member 3 |
+| [member2/05_cnn_robustness](notebooks/member2/05_cnn_robustness.ipynb) | 3 seeds, 60 epochs, PCA bands, bootstrap CIs: is the fusion gain real? |
 
 ## Honest use
 

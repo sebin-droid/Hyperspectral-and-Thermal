@@ -65,6 +65,18 @@ note that it is a modelled estimate, not a causal guarantee.
 - `runs/<run_id>/explain/global_importance.csv`: `feature, mean_abs_shap, direction, climate_group`
 - `runs/<run_id>/explain/<pair_id>_attr.tif`: one band per input group (attribution per pixel)
 
+## 4b. Land-cover and heat change — produced by `urbanheat change` (Member 1 work), for Member 4's dashboard
+
+`<derived_dir>/change/cell_year.csv`, one row per city (cell) and year 2016–2025:
+`cell_id, climate_group, year, hot_season_start_month, green, built, water, bare` (ha, Dynamic World yearly mode),
+`n_scenes, dw_images, lst_built_c, lst_cell_c, lst_rural_c` (hot-season Landsat median, °C; empty = no clear scene),
+`suhi_c` (= built − rural ring 1–6 km outside).
+
+`<derived_dir>/change/transitions.csv`, one row per city: `dlst_<transition>` = hot-season LST change
+(last 3 years − first 3 years, °C) and `n_<transition>` = 30 m pixels, for `green_stable, green_to_built,
+built_stable, built_to_green, water_stable, water_to_other`. Extra warming of a change =
+`dlst_green_to_built − dlst_green_stable` etc.
+
 ## 5. Map outputs — for the dashboard
 
 Cloud-optimised GeoTIFF, EPSG of the pair, band 1 = predicted LST (°C), band 2 = uncertainty (°C) if available.
