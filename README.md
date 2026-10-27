@@ -57,7 +57,13 @@ object with `predict(batch)` (for example a trivial model that returns the scene
 
 - One branch per task, merged through a pull request reviewed by another member.
 - `pytest` must pass before merging.
-- Notebooks go in `notebooks/<member>/` for exploration only; anything reused moves into `src/urbanheat/`.
+- Every step has a notebook in `notebooks/<member>/`, committed **with its outputs** so results can be read on
+  GitHub without running anything. Notebooks call the package; reusable code lives in `src/urbanheat/`.
+
+| Notebook | Shows |
+|---|---|
+| [member1/01_thermal_context_qc](notebooks/member1/01_thermal_context_qc.ipynb) | thermal context layer: coverage, observations, match with the target |
+| [member2/01_dataset_overview](notebooks/member2/01_dataset_overview.ipynb) | harmonised dataset: splits, band grid, sensor agreement, variance split, a training patch |
 
 ## Honest use
 
