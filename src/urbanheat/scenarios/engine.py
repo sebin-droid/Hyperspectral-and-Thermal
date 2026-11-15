@@ -17,6 +17,7 @@ from urbanheat.models.train import KEYS
 
 # where each lever sits in the model inputs; albedo is a contract lever but not a CNN input
 LEVER_CH = {"NDVI": ("ls", LS_INPUTS.index("NDVI")), "MNDWI": ("ls", LS_INPUTS.index("MNDWI")),
+            "NDBI": ("ls", LS_INPUTS.index("NDBI")),
             "built_share": ("env", ENV_INPUTS.index("built_share"))}
 NOTE = "Modelled estimate of land surface temperature change; not a causal guarantee."
 

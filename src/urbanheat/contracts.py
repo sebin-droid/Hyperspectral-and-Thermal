@@ -19,7 +19,8 @@ MET_INPUTS = ["air_temp_c", "rel_humidity", "wind_speed_kmh", "solar_rad_wm2", "
 SENSORS = ["EMIT", "ENMAP", "HYPERION"]
 
 # Surface factors a scenario may change (mitigation levers); everything else is held fixed.
-LEVERS = {"NDVI": (-1.0, 1.0), "built_share": (0.0, 1.0), "albedo": (0.0, 1.0), "MNDWI": (-1.0, 1.0)}
+LEVERS = {"NDVI": (-1.0, 1.0), "built_share": (0.0, 1.0), "albedo": (0.0, 1.0), "MNDWI": (-1.0, 1.0),
+          "NDBI": (-1.0, 1.0)}   # Member 3: greening also lowers NDBI (built -> tree: NDVI +0.34, NDBI -0.20, Member 1)
 
 
 class HeatModel(Protocol):
