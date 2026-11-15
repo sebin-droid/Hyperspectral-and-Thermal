@@ -1,0 +1,15 @@
+{
+ "lite": true,
+ "variant": "fusion_nohs_cnn",
+ "width": 32,
+ "thermal_width": 16,
+ "separable": true,
+ "alpha": 0.5,
+ "teacher": "/kaggle/working/data/runs/cnn_robust_fusion_cnn_s0",
+ "clip_indices": true,
+ "epochs": 60,
+ "batch_size": 32,
+ "lr": 0.002,
+ "samples_per_epoch": 4000,
+ "patience": 10
+}

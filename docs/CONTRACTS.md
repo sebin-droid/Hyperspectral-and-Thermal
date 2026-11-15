@@ -57,7 +57,7 @@ Every model implements `HeatModel.predict(batch) -> (B, H, W) LST in °C` and is
 ## 3. Scenario — defined by Member 3, used by Member 4's app
 
 `Scenario(name, changes={lever: additive change}, region=geojson)`. Allowed levers: `NDVI`, `built_share`,
-`albedo`, `MNDWI`. Output: `ΔLST = predict(changed) − predict(current)` per pixel, as a GeoTIFF, with the
+`albedo`, `MNDWI`, `NDBI` (`albedo` is not a CNN input, so the engine rejects it). Output: `ΔLST = predict(changed) − predict(current)` per pixel, as a GeoTIFF, with the
 note that it is a modelled estimate, not a causal guarantee.
 
 ## 4. Explanations — produced by Member 4 (and Member 2 for the factor analysis)
