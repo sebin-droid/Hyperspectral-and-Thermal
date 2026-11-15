@@ -15,6 +15,8 @@ VARIANTS = {
     "spectral_cnn": dict(surface=["hs", "ls", "env"], thermal=False),
     "thermal_cnn": dict(surface=[], thermal=True),
     "fusion_cnn": dict(surface=["hs", "ls", "env"], thermal=True),
+    # Member 3: fusion without the 122 hyperspectral bands (cheapest candidate student; hs did not beat Landsat)
+    "fusion_nohs_cnn": dict(surface=["ls", "env"], thermal=True),
     # hyperspectral reduced to its top principal components first (fixed projection fitted on train pixels)
     "spectral_pca_cnn": dict(surface=["hs", "ls", "env"], thermal=False, pca=True),
     "fusion_pca_cnn": dict(surface=["hs", "ls", "env"], thermal=True, pca=True),
