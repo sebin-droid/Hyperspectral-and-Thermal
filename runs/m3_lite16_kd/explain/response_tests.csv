@@ -1,0 +1,7 @@
+model,scenario,change,mean_dlst_c,cities_cooling
+student m3_lite16_kd,densify,{'built_share': 0.1},0.006478662,0.6428571428571429
+student m3_lite16_kd,ndvi_only,{'NDVI': 0.1},-0.017264254,0.6964285714285714
+student m3_lite16_kd,ndbi_only,{'NDBI': 0.1},0.07091205,0.14285714285714285
+teacher fusion_cnn,densify,{'built_share': 0.1},-0.019837264,0.5357142857142857
+teacher fusion_cnn,ndvi_only,{'NDVI': 0.1},-0.00072221743,0.9642857142857143
+teacher fusion_cnn,ndbi_only,{'NDBI': 0.1},0.0018893657,0.03571428571428571

@@ -85,3 +85,45 @@ def test_ask_uses_claude_when_available():
 
     r = assistant.ask("why hot?", {"top_factors": "NDBI +1.2 °C"}, client=Fake())
     assert r["mode"] == "claude" and r["answer"].startswith("Hot")
+
+
+def test_insights_need_explain_tables(client):
+    assert client.get("/api/insights").json()["available"] is False
+
+
+def test_insights_from_a_run_folder(fake_h5, tmp_path):
+    import json
+    from urbanheat.data.dataset import PatchDataset
+    from urbanheat.efficient.distill import Prepared
+    from urbanheat.explain import xai
+    from urbanheat.models import train
+
+    torch.manual_seed(0)
+    m = lite.lite_cnn("fusion_cnn", 8, 4).eval()
+    run = tmp_path / "runs" / "m3_tiny"
+    train.save(m, run, {"test": {"r2": 0.5, "mae": 1.0, "n": 10, "per_climate": {"tropical": {"r2": 0.5, "mae": 1.0, "n": 10}}}},
+               [], dict(lite=True, variant="fusion_cnn", width=8, thermal_width=4, separable=True))
+    ds = Prepared(PatchDataset(fake_h5, "test"))
+    table, _ = xai.global_importance(m, ds, {p: {"climate_group": "tropical"} for p in ds.pairs}, steps=4)
+    (run / "explain").mkdir()
+    table.to_csv(run / "explain" / "global_importance.csv", index=False)
+    (run / "explain" / "response_tests.csv").write_text(
+        "model,scenario,change,mean_dlst_c,cities_cooling\nstudent m3_tiny,densify,{'built_share': 0.1},0.006,0.64\n")
+    ins = TestClient(server.create_app(fake_h5, run_dir=run)).get("/api/insights").json()
+    assert ins["available"] and set(ins["importance"]) == {"all", "tropical"}
+    assert abs(sum(r["share_pct"] for r in ins["importance"]["all"]) - 100) < 0.1
+    assert len(ins["findings"]) == 2 and "+0.006" in ins["findings"][1]
+    assert [a["group"] for a in ins["accuracy"]] == ["all", "tropical"]
+    json.dumps(ins)                                                   # no NaN leaks into the JSON
+
+
+def test_export_geotiffs(client, tmp_path):
+    import rasterio
+    pid = client.get("/api/cities").json()["cities"][0]["pid"]
+    for kind, first in [("pred", "predicted_lst_c"), ("attr", "hyperspectral")]:
+        r = client.get(f"/api/export/{pid}/{kind}.tif")
+        assert r.status_code == 200 and r.headers["content-type"] == "image/tiff"
+        (tmp_path / "x.tif").write_bytes(r.content)
+        with rasterio.open(tmp_path / "x.tif") as t:
+            assert t.descriptions[0] == first
+    assert client.get(f"/api/export/{pid}/nope.tif").status_code == 404

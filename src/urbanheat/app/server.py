@@ -3,15 +3,21 @@
 Run:  urbanheat serve   (or  uvicorn "urbanheat.app.server:create_app" --factory)  then open http://127.0.0.1:8000
 All maps are returned as transparent PNGs with their EPSG:4326 bounds, ready for a Leaflet image overlay.
 """
+import ast
 import base64
 import io
+import json
+import os
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
 import h5py
 import numpy as np
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from matplotlib import colormaps, colors
 from PIL import Image
 from pydantic import BaseModel
@@ -102,7 +108,8 @@ class Workspace:
     def __init__(self, h5, model=None, run_dir=None, device="cpu"):
         self.h5, self.device = str(h5), device
         self.model = model if model is not None else lite.load(run_dir, device)
-        self.run = Path(run_dir).name if run_dir else type(self.model).__name__
+        self.run_dir = Path(run_dir) if run_dir else None
+        self.run = self.run_dir.name if run_dir else type(self.model).__name__
         with h5py.File(self.h5, "r") as f:
             self.info = {pid: dict(sensor=g.attrs["sensor"], split=g.attrs["split"], climate=g.attrs["climate_group"],
                                    date=str(g.attrs.get("landsat_date", "")), median=float(g.attrs["lst_median_c"]),
@@ -205,6 +212,57 @@ class Workspace:
         return dict(layer=render("delta", d, valid, self.info[req.pid]["bounds"]), stats=stats,
                     scenario=dict(name=req.name, changes=req.changes), note=engine.NOTE)
 
+    def insights(self):
+        """Model-wide results for the insights panel: factor ranking per climate (explain/global_importance.csv),
+        small vs Member 2's model, single-factor response tests (notebooks/member4/01_xai), test accuracy, cost."""
+        d = self.run_dir
+        if d is None or not (d / "explain" / "global_importance.csv").exists():
+            return dict(available=False, message="No explain/ tables for this model yet: run notebooks/member4/01_xai.")
+        imp = pd.read_csv(d / "explain" / "global_importance.csv")
+        imp["share_pct"] = 100 * imp["mean_abs_shap"] / imp.groupby("climate_group")["mean_abs_shap"].transform("sum")
+        out = dict(available=True, model=self.run, note=xai.CAVEAT,
+                   importance={c: _records(g[["feature", "mean_abs_shap", "share_pct", "direction"]])
+                               for c, g in imp.groupby("climate_group")})
+        top = imp[imp.climate_group == "all"].sort_values("share_pct").iloc[-1]
+        findings = [f"{top.feature} carries {top.share_pct:.0f} % of all attribution over the test cities."]
+        for key, f in [("comparison", "comparison.csv"), ("responses", "response_tests.csv")]:
+            if (d / "explain" / f).exists():
+                out[key] = _records(pd.read_csv(d / "explain" / f))
+        for r in out.get("responses", []):
+            if self.run in r["model"]:
+                change = ", ".join(f"{k} {v:+g}" for k, v in ast.literal_eval(r["change"]).items())
+                findings.append(f"{change} alone in a 32 × 32 block: {r['mean_dlst_c']:+.3f} °C on average, "
+                                f"cooler in {100 * r['cities_cooling']:.0f} % of test cities.")
+        out["findings"] = findings
+        if (d / "metrics.json").exists():
+            t = json.loads((d / "metrics.json").read_text())["test"]
+            out["accuracy"] = [dict(group="all", r2=t["r2"], mae=t["mae"], n=t["n"])] + [
+                dict(group=g, r2=v["r2"], mae=v["mae"], n=v["n"])
+                for k in ("per_climate", "per_sensor") for g, v in t.get(k, {}).items()]
+        if (d.parent / "m3_slide17.csv").exists():                   # Member 3's accuracy vs cost table
+            out["efficiency"] = _records(pd.read_csv(d.parent / "m3_slide17.csv").rename(columns={"Unnamed: 0": "model"}))
+        return out
+
+    def export(self, pid, kind):
+        """Path of a temporary GeoTIFF: 'pred' = predicted LST (CONTRACTS section 5), 'attr' = attribution per group."""
+        self._check(pid)
+        s = self.scene(pid)
+        if kind == "pred":
+            bands, note = {"predicted_lst_c": self.pred(pid) + self.info[pid]["median"]}, \
+                "Predicted land surface temperature (deg C), not air temperature."
+        elif kind == "attr":
+            bands, note = self.attr(pid), xai.CAVEAT
+        else:
+            raise HTTPException(404, f"unknown export {kind}")
+        fd, path = tempfile.mkstemp(suffix=".tif")
+        os.close(fd)
+        return xai.write_bands(path, bands, self.h5, pid, mask=s["mask"], model=self.run, note=note)
+
+
+def _records(df):
+    return [{k: (None if isinstance(v, float) and np.isnan(v) else round(v, 4) if isinstance(v, float) else v)
+             for k, v in r.items()} for r in df.to_dict("records")]
+
 
 def _bounds(t, shape):
     h, w = shape
@@ -238,6 +296,16 @@ def create_app(h5=None, run_dir=None, model=None, device="cpu"):
     @app.get("/api/layer/{pid}/{name}")
     def layer(pid: str, name: str):
         return ws.layer(pid, name)
+
+    @app.get("/api/insights")
+    def insights():
+        return ws.insights()
+
+    @app.get("/api/export/{pid}/{kind}.tif")
+    def export(pid: str, kind: str):
+        path = ws.export(pid, kind)
+        return FileResponse(path, media_type="image/tiff", filename=f"{pid}_{kind}.tif",
+                            background=BackgroundTask(os.remove, path))
 
     @app.post("/api/explain")
     def explain(r: Region):
