@@ -64,6 +64,9 @@ note that it is a modelled estimate, not a causal guarantee.
 
 - `runs/<run_id>/explain/global_importance.csv`: `feature, mean_abs_shap, direction, climate_group`
 - `runs/<run_id>/explain/<pair_id>_attr.tif`: one band per input group (attribution per pixel)
+- Member 4's method (`urbanheat.explain.xai`): integrated gradients from the train-mean input, in deg C, summed over
+  9 input groups (`xai.GROUPS`). `mean_abs_shap` is the mean |attribution| per pixel; `direction` is the slope of
+  the attribution on the normalised input (> 0: a higher value makes the area hotter). Delivered for `m3_lite16_kd`.
 
 ## 4b. Land-cover and heat change — produced by `urbanheat change` (Member 1 work), for Member 4's dashboard
 

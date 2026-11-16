@@ -227,6 +227,15 @@ def rasterio_bounds(profile):
     return min(xs), min(ys), max(xs), max(ys)
 
 
+def cmd_serve(cfg, args):
+    """Member 4: the map dashboard (FastAPI + Leaflet) on http://<host>:<port>."""
+    import uvicorn
+    from urbanheat.app.server import create_app
+
+    h5 = Path(cfg["data"]["processed_dir"]) / f"urbanheat_v{cfg['harmonize']['version']}.h5"
+    uvicorn.run(create_app(h5, args.run, device=args.device), host=args.host, port=args.port)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="urbanheat")
     ap.add_argument("--config", help="YAML file overriding configs/default.yaml")
@@ -261,6 +270,13 @@ def main(argv=None):
     ch.add_argument("--transitions", action="store_true",
                     help="LST change per land-cover transition (green->built, ...), first vs last 3 years")
     ch.set_defaults(func=cmd_change)
+
+    sv = sub.add_parser("serve", help="map dashboard: layers, explanations, what-if scenarios, assistant")
+    sv.add_argument("--run", default="runs/m3_lite16_kd", help="model run folder (default: Member 3's small model)")
+    sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument("--port", type=int, default=8000)
+    sv.add_argument("--device", default="cpu")
+    sv.set_defaults(func=cmd_serve)
 
     args = ap.parse_args(argv)
     args.func(load_config(args.config), args)

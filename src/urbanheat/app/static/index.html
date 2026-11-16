@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Urban Heat Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root { --bg: #f7f7f8; --panel: #ffffff; --ink: #1d1f24; --muted: #5f6672; --line: #dcdfe4;
+          --accent: #c2410c; --cool: #1d4ed8; --warn-bg: #fff4e5; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #15171b; --panel: #1e2127; --ink: #e8eaed; --muted: #a0a6b0;
+          --line: #343842; --accent: #fb923c; --cool: #60a5fa; --warn-bg: #3a2a16; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg);
+         display: grid; grid-template-columns: 360px 1fr; height: 100vh; }
+  aside { overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 16px; }
+  #map { height: 100vh; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 0 6px; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+  select, input, textarea, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+         border-radius: 6px; padding: 6px 8px; width: 100%; }
+  button { cursor: pointer; background: var(--ink); color: var(--panel); border: 0; font-weight: 600; }
+  button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: wait; }
+  .row { display: flex; gap: 6px; margin: 6px 0; } .row > * { flex: 1; }
+  .levers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .levers label { font-size: 12px; color: var(--muted); }
+  .caveat { background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; font-size: 12px; margin-top: 8px; }
+  .legend .bar { height: 10px; border-radius: 3px; } .legend .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .facts { font-size: 12px; margin: 6px 0; } .facts div { display: flex; justify-content: space-between; border-bottom: 1px dotted var(--line); padding: 2px 0; }
+  .bars div { display: grid; grid-template-columns: 110px 1fr 56px; align-items: center; gap: 6px; font-size: 12px; margin: 2px 0; }
+  .bars .track { position: relative; height: 10px; } .bars .track span { position: absolute; top: 0; height: 10px; border-radius: 2px; }
+  .bars .zero { position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--muted); }
+  .answer { white-space: pre-wrap; font-size: 13px; margin-top: 8px; } .mode { font-size: 11px; color: var(--muted); }
+  .status { font-size: 12px; color: var(--muted); min-height: 18px; }
+  @media (max-width: 760px) { body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; height: auto; }
+    #map { height: 55vh; grid-row: 1; } aside { grid-row: 2; border-right: 0; padding: 16px; } }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Urban heat dashboard</h1>
+  <p class="sub" id="modelname">loading…</p>
+
+  <h2>City and layer</h2>
+  <select id="city" aria-label="City"></select>
+  <div class="row"><select id="layer" aria-label="Layer"></select></div>
+  <label class="sub">Opacity <input id="opacity" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Opacity"></label>
+  <div class="legend" id="legend"></div>
+
+  <h2>Region</h2>
+  <p class="sub">Click on the map to add corners, then press Finish. No region means the whole city.</p>
+  <div class="row"><button id="draw" class="secondary">Draw</button><button id="finish" class="secondary">Finish</button>
+    <button id="clear" class="secondary">Clear</button></div>
+
+  <h2>Why is it hot here?</h2>
+  <button id="explain">Explain region</button>
+  <div class="facts" id="facts"></div>
+  <div class="bars" id="bars"></div>
+
+  <h2>What if…</h2>
+  <select id="preset" aria-label="Scenario preset"></select>
+  <div class="levers" id="levers"></div>
+  <div class="row"><button id="run">Run scenario on region</button></div>
+  <div class="facts" id="scstats"></div>
+
+  <h2>Ask</h2>
+  <textarea id="q" rows="2" aria-label="Question">Why is this area predicted to be hot?</textarea>
+  <div class="row"><button id="ask">Ask</button></div>
+  <div class="answer" id="answer"></div>
+  <div class="mode" id="sources"></div>
+
+  <p class="status" id="status" role="status"></p>
+  <div class="caveat">Land <b>surface</b> temperature, not air temperature. Explanations and scenarios are model
+    estimates learned from data, not proof of cause. Scenario responses are about half the observed size.</div>
+</aside>
+<div id="map"></div>
+<script>
+const $ = id => document.getElementById(id);
+const LEVERS = ["NDVI", "NDBI", "MNDWI", "built_share"];
+const map = L.map("map").setView([20, 0], 2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "&copy; OpenStreetMap" }).addTo(map);
+let meta, overlay = null, pts = [], drawing = false, shape = null, extra = {};
+
+const status = t => $("status").textContent = t || "";
+async function api(path, body) {
+  status("working…");
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({ detail: `${r.status} ${r.statusText}` }));
+  status(r.ok ? "" : (j.detail || "error"));
+  if (!r.ok) throw new Error(j.detail);
+  return j;
+}
+const fmt = v => v == null ? "" : Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(2);
+
+function show(layer) {
+  if (overlay) map.removeLayer(overlay);
+  overlay = L.imageOverlay(layer.url, layer.bounds, { opacity: +$("opacity").value, interactive: false }).addTo(map);
+  if (shape) shape.bringToFront();
+  $("legend").innerHTML = layer.colors.length
+    ? `<div class="sub">${layer.label}${layer.unit ? " (" + layer.unit + ")" : ""}</div>
+       <div class="bar" style="background:linear-gradient(90deg,${layer.colors.join(",")})"></div>
+       <div class="ticks"><span>${fmt(layer.vmin)}</span><span>${fmt((layer.vmin + layer.vmax) / 2)}</span><span>${fmt(layer.vmax)}</span></div>`
+    : `<div class="sub">${layer.label}</div>`;
+}
+async function loadLayer() {
+  const name = $("layer").value;
+  if (extra[name]) return show(extra[name]);
+  try { show(await api(`/api/layer/${$("city").value}/${name}`)); } catch (e) {}
+}
+function geometry() {
+  return shape ? { type: "Polygon", coordinates: [[...pts, pts[0]].map(p => [p.lng, p.lat])] } : null;
+}
+function fillFacts(el, obj) {
+  el.innerHTML = Object.entries(obj).map(([k, v]) => `<div><span>${k.replace(/_/g, " ")}</span><b>${v}</b></div>`).join("");
+}
+function addExtra(layer) {
+  extra[layer.name] = layer;
+  if (![...$("layer").options].some(o => o.value === layer.name)) $("layer").add(new Option(layer.label, layer.name));
+}
+function setPreset() {
+  const ch = meta.presets[$("preset").value] || {};
+  $("levers").innerHTML = LEVERS.map(l => `<label>${l} change<input type="number" step="0.01" id="lv_${l}" value="${ch[l] || 0}"></label>`).join("");
+}
+
+async function init() {
+  meta = await api("/api/cities");
+  $("modelname").textContent = `Model: ${meta.model} · ${meta.cities.length} cities`;
+  for (const c of meta.cities) $("city").add(new Option(`${c.pid} · ${c.climate} · ${c.split}`, c.pid));
+  for (const [k, v] of Object.entries(meta.layers)) $("layer").add(new Option(v, k));
+  $("layer").value = "anomaly";
+  for (const k of Object.keys(meta.presets)) $("preset").add(new Option(k.replace("_to_", " → ").replace(/_/g, " "), k));
+  $("preset").add(new Option("custom", "custom"));
+  setPreset();
+  await selectCity();
+}
+async function selectCity() {
+  const c = meta.cities.find(c => c.pid === $("city").value);
+  map.setView(c.center, 12);
+  clearShape(); extra = {};
+  [...$("layer").options].filter(o => !(o.value in meta.layers)).forEach(o => o.remove());
+  ["facts", "bars", "scstats", "answer", "sources"].forEach(id => $(id).innerHTML = "");
+  await loadLayer();
+}
+function clearShape() { if (shape) map.removeLayer(shape); shape = null; pts = []; drawing = false; }
+
+map.on("click", e => {
+  if (!drawing) return;
+  pts.push(e.latlng);
+  if (shape) map.removeLayer(shape);
+  shape = L.polygon(pts, { color: "#111", weight: 2, fill: false, dashArray: "4 3" }).addTo(map);
+});
+$("draw").onclick = () => { clearShape(); drawing = true; status("click corners on the map, then Finish"); };
+$("finish").onclick = () => { drawing = false; if (pts.length < 3) { clearShape(); status("need at least 3 corners"); } else status(""); };
+$("clear").onclick = () => { clearShape(); status(""); };
+$("city").onchange = selectCity;
+$("layer").onchange = loadLayer;
+$("opacity").oninput = () => overlay && overlay.setOpacity(+$("opacity").value);
+$("preset").onchange = setPreset;
+
+async function busy(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) {} finally { btn.disabled = false; } }
+$("explain").onclick = () => busy($("explain"), async () => {
+  const r = await api("/api/explain", { pid: $("city").value, geometry: geometry() });
+  const { top_factors, ...facts } = r.facts;
+  fillFacts($("facts"), facts);
+  const m = Math.max(...r.factors.map(f => Math.abs(f.mean_c)), 1e-3);
+  $("bars").innerHTML = `<div class="sub">Contribution to the predicted anomaly (°C per pixel)</div>` + r.factors.map(f => {
+    const w = 50 * Math.abs(f.mean_c) / m, left = f.mean_c >= 0 ? 50 : 50 - w;
+    return `<div><span>${f.feature}</span><span class="track"><span class="zero"></span><span style="left:${left}%;width:${w}%;background:${f.mean_c >= 0 ? "var(--accent)" : "var(--cool)"}"></span></span><b>${f.mean_c >= 0 ? "+" : ""}${f.mean_c.toFixed(2)}</b></div>`;
+  }).join("");
+  (r.layers || []).forEach(l => addExtra({ ...l, name: l.name + "_region", label: l.label.replace("hottest 10 %", "drawn region") }));
+});
+$("run").onclick = () => busy($("run"), async () => {
+  const changes = Object.fromEntries(LEVERS.map(l => [l, +$("lv_" + l).value]).filter(([, v]) => v !== 0));
+  const r = await api("/api/scenario", { pid: $("city").value, geometry: geometry(), name: $("preset").value, changes });
+  addExtra(r.layer); $("layer").value = "delta"; show(r.layer);
+  fillFacts($("scstats"), { "mean ΔLST in region": r.stats.mean_inside_c.toFixed(2) + " °C",
+    "range in region": `${r.stats.min_inside_c.toFixed(2)} … ${r.stats.max_inside_c.toFixed(2)} °C`,
+    "mean ΔLST outside": r.stats.mean_outside_c.toFixed(3) + " °C", "pixels changed": r.stats.pixels_inside });
+});
+$("ask").onclick = () => busy($("ask"), async () => {
+  const r = await api("/api/ask", { question: $("q").value, pid: $("city").value, geometry: geometry() });
+  $("answer").textContent = r.answer;
+  $("sources").textContent = (r.mode === "claude" ? "Answer by Claude · " : "Offline answer (no Claude credentials) · ")
+    + "Sources: " + r.sources.map(s => `[${s.n}] ${s.title}`).join("; ");
+});
+init();
+</script>
+</body>
+</html>

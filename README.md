@@ -71,6 +71,20 @@ object with `predict(batch)` (for example a trivial model that returns the scene
 | [member2/03_drivers](notebooks/member2/03_drivers.ipynb) | what drives urban heat: SHAP ranking, effect sizes in °C, by climate, "why is this spot hot" maps |
 | [member2/04_cnn_fusion](notebooks/member2/04_cnn_fusion.ipynb) | landsat / spectral / thermal / fusion CNNs vs XGBoost on the same test pixels; efficiency for Member 3 |
 | [member2/05_cnn_robustness](notebooks/member2/05_cnn_robustness.ipynb) | 3 seeds, 60 epochs, PCA bands, bootstrap CIs: is the fusion gain real? |
+| [member4/01_xai](notebooks/member4/01_xai.ipynb) | integrated gradients + Grad-CAM: what the small model and Member 2's model rely on, per climate; does the response follow physics? |
+| [member4/02_genai_rag](notebooks/member4/02_genai_rag.ipynb) | the map assistant: retrieval over the project docs + Claude, offline fallback |
+| [member4/03_dashboard](notebooks/member4/03_dashboard.ipynb) | the dashboard API: map layers, "why is it hot here", what-if on a drawn district, GeoTIFF export |
+
+## Dashboard (Member 4)
+
+```bash
+pip install -e ".[ml,app]"
+urbanheat serve            # http://127.0.0.1:8000 , model runs/m3_lite16_kd
+```
+
+Pick a city and a layer, draw a district, then ask why it is hot, run a what-if scenario, or ask the assistant.
+The assistant writes its answers with Claude when `ANTHROPIC_API_KEY` is set (or after `ant auth login`).
+Without credentials it answers offline from the same facts.
 
 ## Honest use
 
