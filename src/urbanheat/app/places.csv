@@ -1,0 +1,282 @@
+cell_id,name,region,cc
+-0.345_39.495,Alboraya,Valencia,ES
+-1.675_6.735,Tafo,Ashanti,GH
+-103.735_19.265,Ciudad de Villa de Alvarez,Colima,MX
+-114.165_51.045,Calgary,Alberta,CA
+-116.475_33.825,Cathedral City,California,US
+-117.735_33.615,Laguna Woods,California,US
+-118.295_34.105,Silver Lake,California,US
+-119.835_36.765,West Park,California,US
+-119.835_36.835,Fresno,California,US
+-121.795_37.255,Seven Trees,California,US
+-122.075_37.955,Pleasant Hill,California,US
+-122.215_37.465,Atherton,California,US
+-122.285_47.895,Mukilteo,Washington,US
+-122.425_37.675,Brisbane,California,US
+-122.565_45.445,Happy Valley,Oregon,US
+-157.915_21.365,Halawa Heights,Hawaii,US
+-34.855_-7.195,Joao Pessoa,Paraiba,BR
+-4.335_11.145,Bobo-Dioulasso,High-Basins,BF
+-40.245_-20.215,Serra,Espirito Santo,BR
+-42.835_-5.095,Timon,Maranhao,BR
+-43.955_-19.795,Santa Luzia,Minas Gerais,BR
+-44.865_-20.145,Divinopolis,Minas Gerais,BR
+-47.385_-22.735,Santa Barbara d'Oeste,Sao Paulo,BR
+-47.665_-22.735,Piracicaba,Sao Paulo,BR
+-48.085_-15.875,Brasilia,Federal District,BR
+-54.595_-20.425,Campo Grande,Mato Grosso do Sul,BR
+-56.135_-15.665,Varzea Grande,Mato Grosso,BR
+-6.435_6.875,Daloa,Haut-Sassandra,CI
+-66.075_18.355,Guaynabo,Guaynabo,PR
+-66.635_18.005,Ponce,Ponce,PR
+-68.805_-32.885,Mendoza,Mendoza,AR
+-68.875_-32.885,Mendoza,Mendoza,AR
+-68.875_-33.025,Lujan de Cuyo,Mendoza,AR
+-73.075_-36.805,Concepcion,Biobio,CL
+-73.915_40.895,Inwood,New York,US
+-74.055_40.825,Moonachie,New Jersey,US
+-74.125_40.615,Bloomfield,New York,US
+-74.825_10.935,Barranquilla,Atlantico,CO
+-76.855_39.145,North Laurel,Maryland,US
+-76.925_38.795,Camp Springs,Maryland,US
+-76.925_38.865,Coral Hills,Maryland,US
+-76.925_38.935,Bladensburg,Maryland,US
+-77.275_38.655,Potomac Mills,Virginia,US
+-80.005_40.405,Mount Oliver,Pennsylvania,US
+-80.285_25.705,South Miami,Florida,US
+-83.995_43.415,Saginaw,Michigan,US
+-84.205_10.025,Alajuela,Alajuela,CR
+-86.305_12.125,Ciudad Sandino,Managua,NI
+-87.985_15.485,San Pedro Sula,Cortes,HN
+-9.305_10.375,Kankan,Kankan,GN
+-90.575_14.505,Petapa,Guatemala,GT
+-95.055_29.485,Dickinson,Texas,US
+-96.175_19.195,Veracruz,Veracruz,MX
+-97.435_35.435,Del City,Oklahoma,US
+-97.995_26.195,Midway North,Texas,US
+-99.185_18.915,Loma Bonita,Morelos,MX
+10.225_5.545,Mbouda,West,CM
+100.035_13.945,Don Tum,Nakhon Pathom,TH
+100.245_16.815,Phitsanulok,Phitsanulok,TH
+100.315_13.665,Nong Khaem,Bangkok,TH
+100.385_13.875,Bang Yai,Nonthaburi,TH
+100.595_14.365,Phra Nakhon Si Ayutthaya,Phra Nakhon Si Ayutthaya,TH
+100.735_13.875,Khlong Sam Wa,Bangkok,TH
+102.205_6.035,Kampong Kadok,Kelantan,MY
+102.835_16.465,Khon Kaen,Khon Kaen,TH
+103.815_1.555,Ulu Tiram,Johor,MY
+104.865_11.635,Phnom Penh,Phnom Penh,KH
+105.705_18.705,Vinh,Nghe An,VN
+106.055_-6.005,Curug,Banten,ID
+106.965_-6.915,Sukabumi,West Java,ID
+107.525_-6.985,Margahayukencana,West Java,ID
+107.595_16.465,Hue,Thua Thien-Hue,VN
+107.805_-6.915,Cileunyi,West Java,ID
+107.945_-7.055,Talun,West Java,ID
+108.085_15.835,Dai Loc,Quang Nam,VN
+108.155_15.975,Hoa Vang,Da Nang,VN
+109.205_-7.125,Lebaksiu,Central Java,ID
+109.205_-7.405,Purwokerto,Central Java,ID
+109.485_18.285,Fenghuang,Hainan,CN
+110.395_-7.685,Sleman,Daerah Istimewa Yogyakarta,ID
+110.535_-7.055,Mranggen,Central Java,ID
+110.675_-7.685,Ceper,Central Java,ID
+110.885_-7.475,Surakarta,Central Java,ID
+110.885_-7.545,Jaten,Central Java,ID
+110.885_-7.755,Selogiri,Central Java,ID
+111.095_-7.125,Jagong,Central Java,ID
+111.865_-7.615,Nganjuk,East Java,ID
+112.635_-7.335,Driyorejo,East Java,ID
+112.705_-7.545,Tanggulangin,East Java,ID
+112.705_-7.615,Pandaan,East Java,ID
+112.705_-7.685,Pandaan,East Java,ID
+112.845_-7.685,Pasuruan,East Java,ID
+112.915_-7.685,Pasuruan,East Java,ID
+113.475_-7.755,Parseh,East Java,ID
+113.755_-8.175,Kertosari,East Java,ID
+114.175_22.345,Wong Tai Sin,Wong Tai Sin,HK
+116.205_39.845,Lugu,Beijing,CN
+116.275_40.125,Shahe,Beijing,CN
+119.635_29.135,Jinhua,Zhejiang Sheng,CN
+120.405_22.625,Fengshan,Taiwan,TW
+120.475_30.885,Zhenze,Jiangsu Sheng,CN
+120.755_31.725,Haiyu,Jiangsu Sheng,CN
+120.965_15.485,Cabanatuan City,Central Luzon,PH
+123.205_13.665,Magarao,Bicol,PH
+123.555_13.245,Tuburan,Bicol,PH
+138.675_35.155,Fuji,Shizuoka,JP
+14.145_40.895,Torretta-Scalzapecora,Campania,IT
+14.215_40.965,Aversa,Campania,IT
+140.985_38.305,Rifu,Miyagi,JP
+141.265_38.445,Ishinomaki,Miyagi,JP
+150.925_-33.795,Girraween,New South Wales,AU
+151.065_-33.795,West Ryde,New South Wales,AU
+151.205_-33.795,Castle Cove,New South Wales,AU
+18.695_50.275,Gliwice,Silesian Voivodeship,PL
+18.835_-34.075,Stellenbosch,Western Cape,ZA
+18.905_47.405,Erd,Pest,HU
+20.935_52.165,Rybie,Masovian Voivodeship,PL
+23.245_42.715,Bozhurishte,Sofiya,BG
+23.315_42.715,Sofia,Sofia-Capital,BG
+26.045_44.395,Magurele,Ilfov,RO
+26.115_44.395,Bucuresti,Bucuresti,RO
+26.255_-29.175,Bloemfontein,Orange Free State,ZA
+28.215_-15.455,Lusaka,Lusaka,ZM
+29.405_-3.345,Bujumbura,Bujumbura Mairie,BI
+29.685_-2.435,Nyanza,Southern Province,RW
+29.755_-2.575,Butare,Southern Province,RW
+29.825_-2.925,Ngozi,Ngozi,BI
+3.855_7.295,Idi-Ayunre,Oyo,NG
+30.035_0.715,Bundibugyo,Western Region,UG
+30.175_59.795,Uritsk,St.-Petersburg,RU
+30.245_-1.385,Byumba,Northern Province,RW
+30.245_-1.945,Kigali,Kigali,RW
+30.245_1.555,Bunia,Eastern Province,CD
+30.315_59.865,Kupchino,St.-Petersburg,RU
+30.385_60.005,Kalininskiy,Leningrad,RU
+30.525_-2.155,Kibungo,Eastern Province,RW
+30.805_29.345,Al Fayyum,Muhafazat al Fayyum,EG
+30.875_29.345,Al Fayyum,Muhafazat al Fayyum,EG
+30.875_29.415,Tamiyah,Muhafazat al Fayyum,EG
+30.875_29.485,Tamiyah,Muhafazat al Fayyum,EG
+30.875_3.025,Arua,Northern Region,UG
+31.785_-1.315,Bukoba,Kagera,TZ
+32.415_15.555,Omdurman,Khartoum,SD
+32.415_15.625,Omdurman,Khartoum,SD
+32.485_-25.815,Matola,Maputo,MZ
+32.485_15.695,Omdurman,Khartoum,SD
+32.555_-25.885,Maputo,Maputo City,MZ
+32.765_39.915,Batikent,Ankara,TR
+32.905_2.255,Lira,Northern Region,UG
+32.975_-2.575,Mwanza,Mwanza,TZ
+33.465_0.645,Iganga,Eastern Region,UG
+33.745_1.205,Pallisa,Eastern Region,UG
+34.305_31.375,Khan Yunis,Gaza Strip,PS
+34.515_-1.035,Migori,Migori,KE
+34.515_-1.245,Sirari,Mara,TZ
+34.725_-0.055,Kisumu,Kisumu,KE
+34.865_0.505,Webuye,Bungoma,KE
+35.145_-0.335,Kericho,Kericho,KE
+36.685_-3.415,Arusha,Arusha,TZ
+37.945_0.155,Maua,Isiolo,KE
+39.205_-15.105,Nampula,Nampula,MZ
+39.275_8.555,Nazret,Oromiya,ET
+4.555_7.505,Ile-Ife,Osun,NG
+4.905_43.975,Vedene,Provence-Alpes-Cote d'Azur,FR
+44.245_33.335,Abu Ghurayb,Mayorality of Baghdad,IQ
+44.245_33.545,At Tarmiyah,Mayorality of Baghdad,IQ
+5.255_7.645,Ado-Ekiti,Ekiti,NG
+5.675_6.315,Benin City,Edo,NG
+52.365_36.485,Amol,Mazandaran,IR
+56.635_24.445,Al Liwa',Al Batinah,OM
+6.235_7.575,Ogaminan,Kogi,NG
+69.445_36.765,Taloqan,Takhar,AF
+7.425_10.445,Makera,Kaduna,NG
+7.425_9.045,Abuja,Abuja Federal Capital Territory,NG
+7.495_6.945,Obollo-Afor,Enugu,NG
+7.495_7.015,Enugu-Ezike,Enugu,NG
+7.705_48.595,Oberhausbergen,Alsace,FR
+7.775_48.595,Schiltigheim,Alsace,FR
+70.495_28.645,Kot Samaba,Punjab,PK
+70.495_28.785,Zahir Pir,Punjab,PK
+70.565_34.455,Sangar Saray,Nangarhar,AF
+71.475_34.735,Dangam,Konar,AF
+72.385_23.605,Visnagar,Gujarat,IN
+72.455_24.165,Palanpur,Gujarat,IN
+72.875_19.265,Borivli,Maharashtra,IN
+72.875_20.105,Silvassa,Dadra and Nagar Haveli,IN
+72.945_22.555,Anand,Gujarat,IN
+72.945_22.905,Mahudha,Gujarat,IN
+73.015_19.125,Airoli,Maharashtra,IN
+73.015_20.105,Silvassa,Dadra and Nagar Haveli,IN
+73.015_20.315,Amli,Dadra and Nagar Haveli,IN
+73.085_19.265,Bhiwandi,Maharashtra,IN
+73.085_20.805,Chikhli,Gujarat,IN
+73.155_19.195,Amarnath,Maharashtra,IN
+73.155_20.665,Dharampur,Gujarat,IN
+73.225_22.275,Vadodara,Gujarat,IN
+73.365_20.805,Vansada,Gujarat,IN
+73.715_24.585,Udaipur,Rajasthan,IN
+73.785_15.555,Saligao,Goa,IN
+73.785_18.635,Pimpri,Maharashtra,IN
+73.785_22.555,Devgadh Bariya,Gujarat,IN
+73.855_18.565,Khadki,Maharashtra,IN
+73.855_19.965,Deolali,Maharashtra,IN
+73.855_22.905,Morwa,Gujarat,IN
+73.855_22.975,Morwa,Gujarat,IN
+73.925_22.695,Devgadh Bariya,Gujarat,IN
+73.995_22.625,Devgadh Bariya,Gujarat,IN
+74.065_19.195,Kalamb,Maharashtra,IN
+74.065_23.325,Galiakot,Rajasthan,IN
+74.135_22.975,Dahod,Gujarat,IN
+74.415_14.435,Kumta,Karnataka,IN
+74.415_23.465,Banswara,Rajasthan,IN
+74.415_34.315,Sopur,Kashmir,IN
+74.975_12.825,Bantval,Karnataka,IN
+74.975_30.185,Bhatinda,Punjab,IN
+75.325_19.895,Aurangabad,Maharashtra,IN
+76.095_10.935,Malappuram,Kerala,IN
+76.165_11.145,Manjeri,Kerala,IN
+76.165_11.565,Kalpetta,Kerala,IN
+76.305_10.865,Cherpulassery,Kerala,IN
+76.515_9.955,Ramamangalam,Kerala,IN
+76.655_9.465,Tiruvalla,Kerala,IN
+76.935_11.005,Coimbatore,Tamil Nadu,IN
+77.285_30.115,Yamunanagar,Haryana,IN
+77.565_11.565,Anthiyur,Tamil Nadu,IN
+77.635_13.105,Yelahanka,Karnataka,IN
+77.985_10.375,Dindigul,Tamil Nadu,IN
+78.125_11.635,Salem,Tamil Nadu,IN
+78.195_12.405,Kaverippattanam,Tamil Nadu,IN
+78.335_17.445,Serilingampalle,Telangana,IN
+78.405_10.585,Manapparai,Tamil Nadu,IN
+78.685_10.795,Tiruchirappalli,Tamil Nadu,IN
+79.035_12.895,Pallikondai,Tamil Nadu,IN
+79.035_21.155,Nagpur,Maharashtra,IN
+79.595_11.565,Kurinjippadi,Tamil Nadu,IN
+8.475_12.055,Ungogo,Kano,NG
+8.545_11.915,Kumbotso,Kano,NG
+8.545_12.055,Kano,Kano,NG
+8.895_9.815,Bukuru,Plateau,NG
+80.015_9.675,Jaffna,Northern Province,LK
+80.085_13.105,Avadi,Tamil Nadu,IN
+80.225_12.895,Injambakkam,Tamil Nadu,IN
+80.365_6.735,Ratnapura,Sabaragamuwa,LK
+80.645_7.505,Kandy,Central,LK
+82.185_22.065,Bilaspur,Chhattisgarh,IN
+83.305_17.725,Yarada,Andhra Pradesh,IN
+83.865_18.285,Srikakulam,Andhra Pradesh,IN
+84.005_21.435,Sambalpur,Odisha,IN
+84.005_21.855,Jharsuguda,Odisha,IN
+84.075_25.915,Maniar,Uttar Pradesh,IN
+85.195_19.755,Banapur,Odisha,IN
+85.825_20.315,Bhubaneshwar,Odisha,IN
+86.245_20.175,Jagatsinghapur,Odisha,IN
+86.245_22.765,Jugsalai,Jharkhand,IN
+86.315_20.805,Jajpur,Odisha,IN
+86.945_21.505,Balasore,Odisha,IN
+87.365_22.345,Kharagpur,West Bengal,IN
+87.645_22.905,Ramjibanpur,West Bengal,IN
+87.715_21.715,Contai,West Bengal,IN
+88.345_22.765,Shrirampur,West Bengal,IN
+88.415_22.905,Naihati,West Bengal,IN
+9.035_45.725,Cadorago-Caslino al Piano,Lombardy,IT
+90.165_23.605,Dohar,Dhaka,BD
+90.235_23.185,Madaripur,Dhaka,BD
+90.585_23.675,Narayanganj,Dhaka,BD
+90.655_22.065,Uttar Char Fasson,Khulna,BD
+91.425_23.045,Feni,Chittagong,BD
+91.565_26.405,Rangia,Assam,IN
+91.635_25.005,Chhatak,Sylhet,BD
+91.845_22.205,Chittagong,Chittagong,BD
+91.845_22.275,Chittagong,Chittagong,BD
+92.125_24.795,Karimganj,Assam,IN
+92.615_24.585,Lala,Assam,IN
+92.615_24.865,Badarpur,Assam,IN
+92.965_24.795,Lakhipur,Assam,IN
+96.115_16.815,Yangon,Yangon,MM
+96.115_21.995,Mandalay,Mandalay,MM
+98.495_3.655,Binjai,North Sumatra,ID
+98.985_18.705,Saraphi,Chiang Mai,TH
+99.965_13.455,Bang Khon Thi,Samut Songkhram,TH
+99.965_13.805,Nakhon Pathom,Nakhon Pathom,TH

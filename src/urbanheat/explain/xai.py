@@ -35,13 +35,14 @@ def _batch(scene, device):
     return {k: torch.as_tensor(np.asarray(scene[k]))[None].to(device) for k in INPUT_KEYS}
 
 
-def integrated_gradients(model, scene, device="cpu", steps=32, chunk=8):
-    """{key: (C, H, W)} IG attribution in deg C of each input value to the summed prediction over valid pixels.
-    Keys the model does not read are left out. Midpoint rule over `steps` points of the path."""
+def integrated_gradients(model, scene, device="cpu", steps=32, chunk=8, target=None):
+    """{key: (C, H, W)} IG attribution in deg C of each input value to the summed prediction over `target`
+    (bool (H, W), default: all valid pixels). Keys the model does not read are left out. Midpoint rule over `steps`
+    points of the path. Divide by target.sum() to explain the mean prediction of a region."""
     model.eval()
     x = _batch(scene, device)
     sensor = torch.as_tensor([scene["sensor"]], device=device)
-    mask = torch.as_tensor(scene["mask"], device=device)
+    mask = torch.as_tensor(scene["mask"] if target is None else target, device=device)
     grads = {k: torch.zeros_like(v) for k, v in x.items()}
     alphas = (torch.arange(steps, device=device, dtype=torch.float32) + 0.5) / steps
     for a in alphas.split(chunk):
@@ -60,12 +61,32 @@ def by_group(attr):
     return {g: attr[k][ch].sum(0) for g, (k, ch) in GROUPS.items() if k in attr}
 
 
-def baseline_sum(model, scene, device="cpu"):
-    """Summed prediction over valid pixels for the baseline input (completeness check: IG total = pred - this)."""
+def baseline_sum(model, scene, device="cpu", target=None):
+    """Summed prediction over `target` (default: valid pixels) for the baseline input (IG total = pred - this)."""
     b = {k: torch.zeros_like(v) for k, v in _batch(scene, device).items()}
     b["sensor"] = torch.as_tensor([scene["sensor"]], device=device)
     with torch.no_grad():
-        return float(model(b)[0][torch.as_tensor(scene["mask"], device=device)].sum())
+        return float(model(b)[0][torch.as_tensor(scene["mask"] if target is None else target, device=device)].sum())
+
+
+def explain_region(model, scene, where, device="cpu", steps=32, margin=16):
+    """Why the model predicts what it does for the mean of a region: (contributions {group: deg C},
+    baseline deg C, prediction deg C) with  baseline + sum(contributions) = prediction  (completeness).
+    Runs on a crop around the region; `margin` >= the receptive-field radius (14 px) keeps it exact."""
+    rows, cols = np.nonzero(where)
+    h, w = where.shape
+    r0, r1 = max(rows.min() - margin, 0), min(rows.max() + margin + 1, h)
+    c0, c1 = max(cols.min() - margin, 0), min(cols.max() + margin + 1, w)
+    sub = {k: np.asarray(scene[k])[..., r0:r1, c0:c1] for k in INPUT_KEYS + ["mask"]}
+    sub["sensor"] = scene["sensor"]
+    t = where[r0:r1, c0:c1]
+    n = t.sum()
+    groups = {g: float(a.sum() / n) for g, a in by_group(integrated_gradients(model, sub, device, steps, target=t)).items()}
+    base = baseline_sum(model, sub, device, t) / n
+    with torch.no_grad():
+        pred = float(model({**_batch(sub, device), "sensor": torch.as_tensor([sub["sensor"]], device=device)})[0]
+                     [torch.as_tensor(t, device=device)].mean())
+    return groups, base, pred
 
 
 def scene_summary(groups, scene, where=None):

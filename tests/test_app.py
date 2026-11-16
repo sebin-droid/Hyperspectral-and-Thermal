@@ -1,21 +1,24 @@
-import numpy as np
+import json
+
 import pytest
+import rasterio
 import torch
 from fastapi.testclient import TestClient
 from rasterio.warp import transform
 
 from conftest import TRANSFORM
 from urbanheat.app import assistant, server
+from urbanheat.data.dataset import PatchDataset
 from urbanheat.efficient import lite
+from urbanheat.efficient.distill import Prepared
+from urbanheat.explain import xai
+from urbanheat.models import train
 
 
-def lonlat(r, c):
+def latlng(r, c):
     """EPSG:4326 position of pixel (row, col) centre of the fake pairs (EPSG:32643)."""
     xs, ys = transform("EPSG:32643", "EPSG:4326", [TRANSFORM[2] + 60 * (c + 0.5)], [TRANSFORM[5] - 60 * (r + 0.5)])
-    return [xs[0], ys[0]]
-
-
-SQUARE = {"type": "Polygon", "coordinates": [[lonlat(4.5, 4.5), lonlat(4.5, 14.5), lonlat(14.5, 14.5), lonlat(14.5, 4.5), lonlat(4.5, 4.5)]]}
+    return ys[0], xs[0]
 
 
 @pytest.fixture
@@ -24,11 +27,20 @@ def client(fake_h5):
     return TestClient(server.create_app(fake_h5, model=lite.lite_cnn("fusion_cnn", 8, 4).eval()))
 
 
-def test_cities_and_layers(client):
-    meta = client.get("/api/cities").json()
-    assert len(meta["cities"]) == 4 and meta["cities"][0]["split"] == "test"
-    pid = meta["cities"][0]["pid"]
-    for name in ["lst", "pred", "anomaly", "rgb", "NDVI", "attr_NDVI", "gradcam_thermal"]:
+@pytest.fixture
+def pid(client):
+    return client.get("/api/places").json()["places"][0]["images"][0]["pid"]
+
+
+def test_places_group_images_and_list_layers(client):
+    meta = client.get("/api/places").json()
+    assert meta["n_images"] == 4 and sum(len(p["images"]) for p in meta["places"]) == 4
+    assert {"rgb", "hotspots", "NDVI"} <= {l["name"] for l in meta["layers"] if l["basic"]}
+    assert set(meta["presets"]) == set(server.PRESETS)
+
+
+def test_layers(client, pid):
+    for name in ["rgb", "hotspots", "lst", "pred", "NDVI", "built_share", "attr_NDVI", "gradcam_thermal"]:
         r = client.get(f"/api/layer/{pid}/{name}")
         assert r.status_code == 200, name
         lay = r.json()
@@ -39,38 +51,50 @@ def test_cities_and_layers(client):
     assert client.get("/api/layer/nope/lst").status_code == 404
 
 
-def test_scenario_needs_a_region_and_stays_local(client):
-    pid = client.get("/api/cities").json()["cities"][0]["pid"]
-    body = dict(pid=pid, name="built_to_green", changes=server.PRESETS["built_to_green"])
-    assert client.post("/api/scenario", json=body).status_code == 400
-    r = client.post("/api/scenario", json={**body, "geometry": SQUARE}).json()
-    assert r["stats"]["pixels_inside"] == 100 and "not a causal guarantee" in r["note"]
-    assert client.post("/api/scenario", json={**body, "geometry": SQUARE, "changes": {"albedo": 0.1}}).status_code == 400
+def test_summary_and_its_spots_lie_inside_the_image(client, pid):
+    s = client.get(f"/api/summary/{pid}").json()
+    assert s["coolest_c"] < s["typical_c"] < s["hottest_c"] and 0 <= s["built_pct"] <= 100
+    (south, west), (north, east) = client.get(f"/api/layer/{pid}/lst").json()["bounds"]
+    for k in ("hottest", "coolest"):
+        p = s["spots"][k]
+        assert south <= p["lat"] <= north and west <= p["lng"] <= east
+    assert s["spots"]["hottest"]["diff_c"] > s["spots"]["coolest"]["diff_c"]
 
 
-def test_explain_region_gives_facts_and_factors(client):
-    pid = client.get("/api/cities").json()["cities"][0]["pid"]
-    whole = client.post("/api/explain", json={"pid": pid}).json()
-    region = client.post("/api/explain", json={"pid": pid, "geometry": SQUARE}).json()
-    assert region["facts"]["pixels"] == 100 < whole["facts"]["pixels"]
-    assert {f["feature"] for f in region["factors"]} >= {"NDVI", "built_share", "thermal context"}
-    assert len(region["layers"]) == 2
+def test_spot_explains_a_circle_around_the_click(client, pid):
+    lat, lng = latlng(20, 20)
+    small = client.post("/api/spot", json=dict(pid=pid, lat=lat, lng=lng, radius_m=60)).json()
+    big = client.post("/api/spot", json=dict(pid=pid, lat=lat, lng=lng, radius_m=600)).json()
+    assert small["facts"]["pixels"] < big["facts"]["pixels"] <= 21 * 21
+    assert {r["label"] for r in big["reasons"]} >= {"Greenery", "Buildings and pavement", "Heat seen on other days"}
+    off = client.post("/api/spot", json=dict(pid=pid, lat=lat + 1, lng=lng, radius_m=600))
+    assert off.status_code == 400 and "No data" in off.json()["detail"]
 
 
-def test_ask_answers_offline_without_credentials(client, monkeypatch):
+def test_whatif_presets_stay_local(client, pid):
+    lat, lng = latlng(15, 15)
+    r = client.post("/api/whatif", json=dict(pid=pid, lat=lat, lng=lng, radius_m=300, preset="built_to_green")).json()
+    assert r["label"].startswith("Turn built-up") and "not a causal guarantee" in r["note"]
+    assert 0 < r["stats"]["pixels"] < 40 * 40
+    assert client.post("/api/whatif", json=dict(pid=pid, lat=lat, lng=lng, preset="nope")).status_code == 400
+
+
+def test_ask_answers_offline_without_credentials(client, pid, monkeypatch):
     for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("ANTHROPIC_CONFIG_DIR", "/nonexistent")
-    pid = client.get("/api/cities").json()["cities"][0]["pid"]
-    r = client.post("/api/ask", json={"question": "What does a high NDBI value indicate?", "pid": pid}).json()
-    assert r["mode"] == "offline" and r["sources"] and "surface" in r["answer"]
+    lat, lng = latlng(20, 20)
+    for body in [dict(question="What does a high NDBI value indicate?", pid=pid),
+                 dict(question="Why is this spot hot?", pid=pid, lat=lat, lng=lng)]:
+        r = client.post("/api/ask", json=body).json()
+        assert r["mode"] == "offline" and "ground" in r["answer"]
 
 
 def test_retrieval_finds_the_right_passage():
     kb = assistant.Knowledge()
-    assert kb.search("what does a high NDBI value indicate")[0]["title"].startswith("NDBI")
-    assert kb.search("is this air temperature?")[0]["title"].startswith("Land surface temperature")
-    assert any("Limits" in h["title"] for h in kb.search("can I trust the scenario, is it causal"))
+    assert "NDBI" in kb.search("what does a high NDBI value indicate")[0]["title"]
+    assert kb.search("is this air temperature?")[0]["title"].startswith("Is this the air temperature")
+    assert kb.search("can I trust the what if results")[0]["title"].startswith("Can I trust")
 
 
 def test_ask_uses_claude_when_available():
@@ -92,12 +116,6 @@ def test_insights_need_explain_tables(client):
 
 
 def test_insights_from_a_run_folder(fake_h5, tmp_path):
-    import json
-    from urbanheat.data.dataset import PatchDataset
-    from urbanheat.efficient.distill import Prepared
-    from urbanheat.explain import xai
-    from urbanheat.models import train
-
     torch.manual_seed(0)
     m = lite.lite_cnn("fusion_cnn", 8, 4).eval()
     run = tmp_path / "runs" / "m3_tiny"
@@ -117,9 +135,7 @@ def test_insights_from_a_run_folder(fake_h5, tmp_path):
     json.dumps(ins)                                                   # no NaN leaks into the JSON
 
 
-def test_export_geotiffs(client, tmp_path):
-    import rasterio
-    pid = client.get("/api/cities").json()["cities"][0]["pid"]
+def test_export_geotiffs(client, pid, tmp_path):
     for kind, first in [("pred", "predicted_lst_c"), ("attr", "hyperspectral")]:
         r = client.get(f"/api/export/{pid}/{kind}.tif")
         assert r.status_code == 200 and r.headers["content-type"] == "image/tiff"
@@ -129,9 +145,19 @@ def test_export_geotiffs(client, tmp_path):
     assert client.get(f"/api/export/{pid}/nope.tif").status_code == 404
 
 
-def test_locate_finds_cities_with_data_in_a_region(client):
-    found = client.post("/api/locate", json={"geometry": SQUARE}).json()
-    assert {f["pid"] for f in found} == {"EMIT_0", "EMIT_1", "EMIT_2", "EMIT_3"}       # all fake pairs share one grid
-    assert all(f["pixels"] == 100 for f in found) and found[0]["split"] == "test"
-    far = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
-    assert client.post("/api/locate", json={"geometry": far}).json() == []
+def test_offline_answers_follow_the_question(client, pid, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_CONFIG_DIR", "/nonexistent")
+    for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE"):
+        monkeypatch.delenv(k, raising=False)
+    lat, lng = latlng(20, 20)
+    spot = dict(pid=pid, lat=lat, lng=lng)
+    cool = client.post("/api/ask", json={"question": "is this place cool?", **spot}).json()["answer"]
+    assert cool.split(".")[0] in ("Yes", "No") or cool.startswith("Neither")
+    assert "Starting from an average place" in client.post("/api/ask", json={"question": "Why is this spot hot?", **spot}).json()["answer"]
+    assert client.post("/api/ask", json={"question": "What does NDVI mean?"}).json()["answer"].startswith("NDVI")
+    assert "off by" in client.post("/api/ask", json={"question": "How sure is the model?", "pid": pid}).json()["answer"]
+    assert "step 4" in client.post("/api/ask", json={"question": "Would trees help here?", **spot}).json()["answer"]
+    air = client.post("/api/ask", json={"question": "Is this the air temperature?", "pid": pid}).json()
+    assert air["answer"].startswith("No.") and "Details" not in air["answer"] and len(air["sources"]) == 1
+    hot = client.post("/api/ask", json={"question": "Which parts of this place are hottest?", "pid": pid}).json()["answer"]
+    assert "Hottest spot" in hot

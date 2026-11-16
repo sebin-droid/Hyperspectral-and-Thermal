@@ -75,3 +75,15 @@ def test_write_bands_names_each_band(ds, model, tmp_path):
     with rasterio.open(p) as r:
         assert r.count == len(groups) and list(r.descriptions) == list(groups)
         assert np.isnan(r.read(1)[~s["mask"]]).all() and r.tags()["note"] == xai.CAVEAT
+
+
+def test_explain_region_adds_up_to_the_region_mean(ds, model):
+    s = ds.scene(ds.pairs[0])
+    where = np.zeros_like(s["mask"])
+    where[10:20, 12:22] = True
+    where &= s["mask"]
+    groups, base, pred = xai.explain_region(model, s, where, steps=64)
+    with torch.no_grad():
+        full = model({**xai._batch(s, "cpu"), "sensor": torch.as_tensor([s["sensor"]])})[0].numpy()
+    np.testing.assert_allclose(pred, full[where].mean(), atol=1e-4)            # the crop does not change the prediction
+    np.testing.assert_allclose(base + sum(groups.values()), pred, atol=0.02)

@@ -46,16 +46,12 @@ def _predict(model, scene, device):
 
 
 def region_mask(geojson_path, h5_path, pid):
-    """(H, W) bool: pixels of pair `pid` inside the polygons of a GeoJSON file (EPSG:4326, as GeoJSON requires).
-    Member 4: a GeoJSON dict (e.g. a polygon drawn on the dashboard) works as well as a file path."""
+    """(H, W) bool: pixels of pair `pid` inside the polygons of a GeoJSON file (EPSG:4326, as GeoJSON requires)."""
     with h5py.File(h5_path, "r") as f:
         g = f["pairs"][pid]
         shape, transform, crs = g["valid"].shape, Affine(*g.attrs["transform"][:6]), g.attrs["crs"]
-    if isinstance(geojson_path, dict):
-        gj = geojson_path
-    else:
-        with open(geojson_path) as fh:
-            gj = json.load(fh)
+    with open(geojson_path) as fh:
+        gj = json.load(fh)
     geoms = [ft["geometry"] for ft in gj["features"]] if "features" in gj else [gj.get("geometry", gj)]
     geoms = [transform_geom("EPSG:4326", crs, g) for g in geoms]
     return rasterize(geoms, out_shape=shape, transform=transform, dtype="uint8").astype(bool)

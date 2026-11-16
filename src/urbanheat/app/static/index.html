@@ -3,324 +3,344 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Urban Heat Dashboard</title>
+<title>Urban Heat Explorer</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  :root { --bg: #f7f7f8; --panel: #ffffff; --ink: #1d1f24; --muted: #5f6672; --line: #dcdfe4;
-          --accent: #c2410c; --cool: #1d4ed8; --warn-bg: #fff4e5; }
+  :root { --bg: #f6f6f4; --panel: #ffffff; --ink: #1c1f24; --muted: #5d6470; --line: #e0e2e6; --soft: #f1f2f4;
+          --hot: #c2410c; --cool: #1d4ed8; --accent: #c2410c; --warn: #fff4e5; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #15171b; --panel: #1e2127; --ink: #e8eaed; --muted: #a0a6b0;
-          --line: #343842; --accent: #fb923c; --cool: #60a5fa; --warn-bg: #3a2a16; }
+    :root:not([data-theme="light"]) { --bg: #14161a; --panel: #1c1f25; --ink: #e9ebee; --muted: #a2a8b2; --line: #333842;
+          --soft: #262a31; --hot: #fb923c; --cool: #60a5fa; --accent: #fb923c; --warn: #3a2a16; }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg);
-         display: grid; grid-template-columns: 360px 1fr; height: 100vh; }
-  aside { overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 16px; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg);
+         display: grid; grid-template-columns: 400px 1fr; height: 100vh; }
+  aside { overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 18px 18px 28px; }
   #map { height: 100vh; }
-  h1 { font-size: 18px; margin: 0 0 4px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 0 6px; }
-  .sub { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
-  select, input, textarea, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
-         border-radius: 6px; padding: 6px 8px; width: 100%; }
-  button { cursor: pointer; background: var(--ink); color: var(--panel); border: 0; font-weight: 600; }
-  button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  h1 { font-size: 20px; margin: 0; }
+  .intro { color: var(--muted); margin: 4px 0 12px; }
+  .step { border-top: 1px solid var(--line); padding: 14px 0 6px; }
+  .step h2 { font-size: 15px; margin: 0 0 6px; display: flex; gap: 8px; align-items: center; }
+  .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink);
+         color: var(--panel); font-size: 12px; flex: none; }
+  .step.off { opacity: .45; pointer-events: none; }
+  .help { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  input, select, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+         border-radius: 8px; padding: 8px 10px; width: 100%; }
+  button { cursor: pointer; background: var(--soft); text-align: left; }
+  button:hover { border-color: var(--muted); }
   button:disabled { opacity: .5; cursor: wait; }
+  button.primary { background: var(--ink); color: var(--panel); text-align: center; font-weight: 600; border: 0; }
   .row { display: flex; gap: 6px; margin: 6px 0; } .row > * { flex: 1; }
-  .levers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .levers label { font-size: 12px; color: var(--muted); }
-  .caveat { background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; font-size: 12px; margin-top: 8px; }
-  .legend .bar { height: 10px; border-radius: 3px; } .legend .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
-  .facts { font-size: 12px; margin: 6px 0; } .facts div { display: flex; justify-content: space-between; border-bottom: 1px dotted var(--line); padding: 2px 0; }
-  .bars div { display: grid; grid-template-columns: 110px 1fr 56px; align-items: center; gap: 6px; font-size: 12px; margin: 2px 0; }
-  .bars .track { position: relative; height: 10px; } .bars .track span { position: absolute; top: 0; height: 10px; border-radius: 2px; }
+  .card { background: var(--soft); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+  .card .big { font-size: 22px; font-weight: 700; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 13px; margin-top: 6px; }
+  .stats b { display: block; font-size: 16px; }
+  .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .layers button.on, .seg button.on, .presets button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .seg { display: flex; gap: 6px; } .seg button { text-align: center; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin: 8px 0; }
+  .legend .bar { height: 12px; border-radius: 4px; margin-top: 4px; }
+  .legend .ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .sentence { font-size: 15px; margin: 4px 0 8px; }
+  .hot { color: var(--hot); font-weight: 700; } .cool { color: var(--cool); font-weight: 700; }
+  .bars div { display: grid; grid-template-columns: 1fr 120px 58px; align-items: center; gap: 8px; font-size: 13px; margin: 3px 0; }
+  .bars .track { position: relative; height: 10px; background: var(--bg); border-radius: 3px; }
+  .bars .track span { position: absolute; top: 0; height: 10px; border-radius: 3px; }
   .bars .zero { position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--muted); }
-  .answer { white-space: pre-wrap; font-size: 13px; margin-top: 8px; } .mode { font-size: 11px; color: var(--muted); }
-  .status { font-size: 12px; color: var(--muted); min-height: 18px; }
-  button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .leaflet-container.drawing { cursor: crosshair; }
-  #drawhint.on, #drawhint.warn { color: var(--accent); font-weight: 600; }
-  #toast { position: fixed; top: 14px; left: calc(360px + (100vw - 360px) / 2); transform: translateX(-50%); z-index: 1100;
-           max-width: min(560px, calc(100vw - 400px)); background: var(--ink); color: var(--panel); padding: 8px 14px;
+  .bars b { text-align: right; font-variant-numeric: tabular-nums; }
+  .presets { display: grid; gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .chips button { width: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; }
+  .answer { white-space: pre-wrap; font-size: 14px; }
+  .small { font-size: 12px; color: var(--muted); }
+  .caveat { background: var(--warn); border-radius: 8px; padding: 8px 10px; font-size: 12px; margin-top: 14px; }
+  #toast { position: fixed; top: 14px; left: calc(400px + (100vw - 400px) / 2); transform: translateX(-50%); z-index: 1100;
+           max-width: min(520px, calc(100vw - 440px)); background: var(--ink); color: var(--panel); padding: 8px 14px;
            border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.3); display: none; }
   #toast.show { display: block; } #toast.err { background: #b91c1c; color: #fff; }
-  @media (max-width: 760px) { #toast { left: 50%; max-width: calc(100vw - 32px); } }
-  a.btn { display: block; text-align: center; text-decoration: none; font-size: 12px; color: var(--ink);
-          border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
-  #insights { position: fixed; top: 16px; right: 16px; bottom: 16px; width: min(600px, calc(100vw - 32px)); z-index: 1000;
-          overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px;
-          box-shadow: 0 8px 30px rgba(0,0,0,.25); display: none; }
-  #insights.open { display: block; }
-  #insights .close { position: sticky; top: 0; float: right; width: auto; }
-  #insights ul { padding-left: 18px; margin: 6px 0; }
+  #about { position: fixed; top: 16px; right: 16px; bottom: 16px; width: min(620px, calc(100vw - 32px)); z-index: 1000;
+           overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px;
+           box-shadow: 0 8px 30px rgba(0,0,0,.25); display: none; }
+  #about.open { display: block; } #about .close { float: right; width: auto; }
+  #about h3 { font-size: 14px; margin: 16px 0 4px; }
   table { border-collapse: collapse; width: 100%; font-size: 12px; margin: 6px 0; }
   th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .tablewrap { overflow-x: auto; }
-  @media (max-width: 760px) { body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; height: auto; }
-    #map { height: 55vh; grid-row: 1; } aside { grid-row: 2; border-right: 0; padding: 16px; } }
+  .leaflet-container { cursor: pointer; }
+  @media (max-width: 800px) {
+    body { grid-template-columns: 1fr; grid-template-rows: 50vh auto; height: auto; }
+    #map { height: 50vh; grid-row: 1; } aside { grid-row: 2; border-right: 0; }
+    #toast { left: 50%; max-width: calc(100vw - 32px); }
+  }
 </style>
 </head>
 <body>
 <aside>
-  <h1>Urban heat dashboard</h1>
-  <p class="sub" id="modelname">loading…</p>
-  <button id="openInsights" class="secondary">Model insights</button>
+  <h1>Urban Heat Explorer</h1>
+  <p class="intro">See where a city's ground gets hot, why, and what greener or more built-up land might change.
+    Based on satellite images of <span id="nplaces">…</span> places.</p>
 
-  <h2>City and layer</h2>
-  <select id="city" aria-label="City"></select>
-  <div class="row"><select id="layer" aria-label="Layer"></select></div>
-  <label class="sub">Opacity <input id="opacity" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Opacity"></label>
-  <div class="legend" id="legend"></div>
-  <div class="row"><a class="btn" id="dlPred" download>Prediction GeoTIFF</a><a class="btn" id="dlAttr" download>Attribution GeoTIFF</a></div>
+  <section class="step" id="s1">
+    <h2><span class="num">1</span> Choose a place</h2>
+    <p class="help">Type a name, or click an orange dot on the map.</p>
+    <input id="search" list="placelist" placeholder="e.g. Coimbatore, Bangkok, Lagos…" aria-label="Search a place" autocomplete="off">
+    <datalist id="placelist"></datalist>
+    <div class="row" id="daterow" hidden><select id="date" aria-label="Image date"></select></div>
+    <div id="placecard"></div>
+  </section>
 
-  <h2>Region</h2>
-  <p class="sub" id="drawhint" role="status">Press Draw, click the corners on the map, then press Finish. No region means the whole city.</p>
-  <div class="row"><button id="draw" class="secondary">Draw</button><button id="finish" class="secondary">Finish</button>
-    <button id="clear" class="secondary">Clear</button></div>
+  <section class="step off" id="s2">
+    <h2><span class="num">2</span> What to show on the map</h2>
+    <div class="layers" id="layers"></div>
+    <details><summary>More layers (for experts)</summary><div class="layers" id="xlayers"></div></details>
+    <div class="legend" id="legend"></div>
+    <label class="small">Transparency <input id="opacity" type="range" min="0" max="1" step="0.05" value="0.85" aria-label="Layer opacity"></label>
+  </section>
 
-  <h2>Why is it hot here?</h2>
-  <button id="explain">Explain region</button>
-  <div class="facts" id="facts"></div>
-  <div class="bars" id="bars"></div>
+  <section class="step off" id="s3">
+    <h2><span class="num">3</span> Why is this spot hot (or cool)?</h2>
+    <p class="help">Click any point inside the coloured image, or jump to:</p>
+    <div class="row"><button id="hottest">🔥 Hottest spot</button><button id="coolest">🌳 Coolest spot</button></div>
+    <div class="seg" role="group" aria-label="Area size">
+      <button data-r="300">Small (300 m)</button><button data-r="600" class="on">Medium (600 m)</button><button data-r="1000">Large (1 km)</button>
+    </div>
+    <div id="spotcard"></div>
+  </section>
 
-  <h2>What if…</h2>
-  <select id="preset" aria-label="Scenario preset"></select>
-  <div class="levers" id="levers"></div>
-  <div class="row"><button id="run">Run scenario on region</button></div>
-  <div class="facts" id="scstats"></div>
+  <section class="step off" id="s4">
+    <h2><span class="num">4</span> What if this area changed?</h2>
+    <p class="help">The model re-estimates the ground temperature of the circled area.</p>
+    <div class="presets" id="presets"></div>
+    <div id="whatifcard"></div>
+  </section>
 
-  <h2>Ask</h2>
-  <textarea id="q" rows="2" aria-label="Question">Why is this area predicted to be hot?</textarea>
-  <div class="row"><button id="ask">Ask</button></div>
-  <div class="answer" id="answer"></div>
-  <div class="mode" id="sources"></div>
+  <section class="step off" id="s5">
+    <h2><span class="num">5</span> Ask a question</h2>
+    <div class="chips" id="chips"></div>
+    <div class="row"><input id="q" placeholder="Ask about this place or spot…" aria-label="Question"><button class="primary" id="ask" style="flex:0 0 70px">Ask</button></div>
+    <div class="card" id="answercard" hidden><div class="answer" id="answer"></div><div class="small" id="sources"></div></div>
+  </section>
 
-  <p class="status" id="status" role="status"></p>
-  <div class="caveat">Land <b>surface</b> temperature, not air temperature. Explanations and scenarios are model
-    estimates learned from data, not proof of cause. Scenario responses are about half the observed size.</div>
+  <div class="row" style="margin-top:12px"><button id="openAbout">ℹ️ About the model</button></div>
+  <details><summary>Download maps (GeoTIFF)</summary>
+    <div class="row"><a class="small" id="dlPred" download>Predicted temperature</a><a class="small" id="dlAttr" download>Reasons per factor</a></div>
+  </details>
+  <div class="caveat">This shows the temperature of the <b>ground and roofs</b> seen from space, not the air
+    temperature people feel. Reasons and what-ifs are estimates from a model trained on satellite data, not proof of
+    cause. Place names: GeoNames (CC BY 4.0).</div>
 </aside>
 <div id="map"></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<section id="insights" aria-label="Model insights">
-  <button class="secondary close" id="closeInsights">Close</button>
-  <h1>Model insights</h1>
-  <div id="insightsBody" class="sub">loading…</div>
+<section id="about" aria-label="About the model">
+  <button class="close" id="closeAbout">Close</button>
+  <h1>About the model</h1>
+  <div id="aboutBody" class="small">loading…</div>
 </section>
 <script>
 const $ = id => document.getElementById(id);
-const LEVERS = ["NDVI", "NDBI", "MNDWI", "built_share"];
-const map = L.map("map").setView([20, 0], 2);
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const country = (() => { try { const d = new Intl.DisplayNames(["en"], { type: "region" }); return cc => cc ? d.of(cc) : ""; } catch (e) { return cc => cc; } })();
+const map = L.map("map", { worldCopyJump: true }).setView([15, 30], 2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "&copy; OpenStreetMap" }).addTo(map);
-let meta, overlay = null, pts = [], drawing = false, shape = null, extra = {};
-const corners = L.layerGroup().addTo(map), cityDots = L.layerGroup().addTo(map);
-let toastTimer;
+const dots = L.layerGroup().addTo(map);
+let meta, place = null, pid = null, overlay = null, layerName = "hotspots", spot = null, spotCircle = null, radius = 600, summary = null, toastTimer;
 
-function status(t, err = false) {                 // message over the map, so it is seen wherever the sidebar is scrolled
-  $("status").textContent = t || "";
+function status(t, err = false) {
   clearTimeout(toastTimer);
   $("toast").textContent = t || "";
   $("toast").className = t ? "show" + (err ? " err" : "") : "";
-  if (t && err) toastTimer = setTimeout(() => $("toast").className = "", 9000);
+  if (t && err) toastTimer = setTimeout(() => $("toast").className = "", 8000);
 }
 async function api(path, body) {
   status("Working…");
   const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
   const j = await r.json().catch(() => ({ detail: `${r.status} ${r.statusText}` }));
-  if (r.ok) status(""); else status(j.detail || "error", true);
-  if (!r.ok) throw new Error(j.detail);
+  if (!r.ok) { status(j.detail || "Something went wrong", true); throw new Error(j.detail); }
+  status("");
   return j;
 }
-const fmt = v => v == null ? "" : Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(2);
+const placeName = p => [p.name, p.region, country(p.cc)].filter(Boolean).join(", ");
+const signed = (v, d = 1) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(d)} °C`;
+const fmtDate = d => d ? new Date(d + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+function button(text, onclick, data = {}) {
+  const b = document.createElement("button");
+  b.textContent = text; b.onclick = onclick;
+  Object.entries(data).forEach(([k, v]) => b.dataset[k] = v);
+  return b;
+}
+const enable = (...ids) => ids.forEach(id => $(id).classList.remove("off"));
+const disable = (...ids) => ids.forEach(id => $(id).classList.add("off"));
 
-function show(layer) {
-  if (overlay) map.removeLayer(overlay);
-  overlay = L.imageOverlay(layer.url, layer.bounds, { opacity: +$("opacity").value, interactive: false }).addTo(map);
-  if (shape) shape.bringToFront();
-  $("legend").innerHTML = layer.colors.length
-    ? `<div class="sub">${layer.label}${layer.unit ? " (" + layer.unit + ")" : ""}</div>
-       <div class="bar" style="background:linear-gradient(90deg,${layer.colors.join(",")})"></div>
-       <div class="ticks"><span>${fmt(layer.vmin)}</span><span>${fmt((layer.vmin + layer.vmax) / 2)}</span><span>${fmt(layer.vmax)}</span></div>`
-    : `<div class="sub">${layer.label}</div>`;
-}
-async function loadLayer() {
-  const name = $("layer").value;
-  if (extra[name]) return show(extra[name]);
-  try { show(await api(`/api/layer/${$("city").value}/${name}`)); } catch (e) {}
-}
-function geometry() {
-  if (pts.length < 3) return null;
-  return { type: "Polygon", coordinates: [[...pts, pts[0]].map(p => [p.lng, p.lat])] };
-}
-function fillFacts(el, obj) {
-  el.innerHTML = Object.entries(obj).map(([k, v]) => `<div><span>${k.replace(/_/g, " ")}</span><b>${v}</b></div>`).join("");
-}
-function addExtra(layer) {
-  extra[layer.name] = layer;
-  if (![...$("layer").options].some(o => o.value === layer.name)) $("layer").add(new Option(layer.label, layer.name));
-}
-function setPreset() {
-  const ch = meta.presets[$("preset").value] || {};
-  $("levers").innerHTML = LEVERS.map(l => `<label>${l} change<input type="number" step="0.01" id="lv_${l}" value="${ch[l] || 0}"></label>`).join("");
-}
-
+// ---- 1. places -------------------------------------------------------------------------------------------------
 async function init() {
-  meta = await api("/api/cities");
-  $("modelname").textContent = `Model: ${meta.model} · ${meta.cities.length} cities`;
-  for (const c of meta.cities) $("city").add(new Option(`${c.pid} · ${c.climate} · ${c.split}`, c.pid));
-  for (const [k, v] of Object.entries(meta.layers)) $("layer").add(new Option(v, k));
-  $("layer").value = "anomaly";
-  for (const k of Object.keys(meta.presets)) $("preset").add(new Option(k.replace("_to_", " → ").replace(/_/g, " "), k));
-  $("preset").add(new Option("custom", "custom"));
-  setPreset();
-  // one dot per city: the model only has data inside these ~8 km squares; click a dot to open that city
-  for (const c of meta.cities) {
-    c.dot = L.circleMarker(c.center, { radius: 5, color: "#7c2d12", weight: 1, fillColor: "#f97316", fillOpacity: 0.9 })
-      .bindTooltip(`${c.pid} · ${c.climate} · ${c.split}`)
-      .on("click", () => { if (!drawing) { $("city").value = c.pid; selectCity(); } })
-      .addTo(cityDots);
+  meta = await api("/api/places");
+  $("nplaces").textContent = `${meta.places.length} places (${meta.n_images} images)`;
+  const seen = {};
+  for (const p of meta.places) {
+    p.label = placeName(p);
+    seen[p.label] = (seen[p.label] || 0) + 1;
+    if (seen[p.label] > 1) p.label += ` (${seen[p.label]})`;         // two places near the same town
+    $("placelist").append(new Option(p.label, p.label));
+    p.dot = L.circleMarker(p.center, { radius: 6, color: "#7c2d12", weight: 1, fillColor: "#f97316", fillOpacity: .9, bubblingMouseEvents: false })
+      .bindTooltip(`${esc(p.label)}<br><span style="opacity:.7">${p.images.length} image${p.images.length > 1 ? "s" : ""} · ${p.climate} climate</span>`)
+      .on("click", () => choosePlace(p)).addTo(dots);
   }
-  await selectCity();
+  map.fitBounds(L.latLngBounds(meta.places.map(p => p.center)), { padding: [30, 30] });
+  for (const l of meta.layers) (l.basic ? $("layers") : $("xlayers")).append(button(l.label, () => showLayer(l.name), { layer: l.name }));
+  for (const [k, label] of Object.entries(meta.presets)) $("presets").append(button(label, () => whatIf(k), { preset: k }));
+  setChips();
 }
-async function selectCity(keepRegion = false) {
-  const c = meta.cities.find(c => c.pid === $("city").value);
-  meta.cities.forEach(o => o.dot.setStyle(o === c ? { radius: 9, color: "#111", weight: 2, fillOpacity: 0 } : { radius: 5, color: "#7c2d12", weight: 1, fillOpacity: 0.9 }));
-  if (keepRegion) map.fitBounds(L.latLngBounds(c.box).extend(shape.getBounds()), { maxZoom: 13 });
-  else map.setView(c.center, 12);
-  $("dlPred").href = `/api/export/${c.pid}/pred.tif`; $("dlAttr").href = `/api/export/${c.pid}/attr.tif`;
-  if (!keepRegion) clearShape();
-  extra = {};
-  [...$("layer").options].filter(o => !(o.value in meta.layers)).forEach(o => o.remove());
-  ["facts", "bars", "scstats", "answer", "sources"].forEach(id => $(id).innerHTML = "");
-  await loadLayer();
-}
-function hint() {
-  const h = $("drawhint");
-  h.classList.toggle("on", drawing);
-  h.classList.remove("warn");
-  h.textContent = drawing
-    ? (pts.length < 3 ? `Drawing: ${pts.length} corner${pts.length === 1 ? "" : "s"}. Click at least 3 points on the map.`
-                      : `Drawing: ${pts.length} corners. Click more, or press Finish.`)
-    : shape ? `Region set (${pts.length} corners). Explain it, run a scenario on it, or ask about it.`
-            : "Press Draw, click the corners on the map, then press Finish. No region means the whole city.";
-}
-function setDrawing(on) {
-  drawing = on;
-  $("draw").classList.toggle("active", on);
-  map.getContainer().classList.toggle("drawing", on);
-  if (shape) shape.setStyle(on ? { dashArray: "4 3", fill: false } : { dashArray: null, fill: true, fillOpacity: 0.08 });
-  hint();
-}
-function clearShape() { if (shape) map.removeLayer(shape); shape = null; pts = []; corners.clearLayers(); setDrawing(false); }
+$("search").onchange = () => { const p = meta.places.find(p => p.label === $("search").value); if (p) choosePlace(p); };
+$("date").onchange = () => openImage($("date").value);
 
-map.on("click", e => {
-  if (!drawing) return;
-  pts.push(e.latlng);
-  L.circleMarker(e.latlng, { radius: 4, color: "#111", weight: 2, fillColor: "#fff", fillOpacity: 1 }).addTo(corners);
-  if (shape) map.removeLayer(shape);
-  shape = L.polygon(pts, { color: "#111", weight: 2, fill: false, dashArray: "4 3" }).addTo(map);
-  hint();
-});
-$("draw").onclick = () => { clearShape(); setDrawing(true); };
-async function finishRegion() {
-  setDrawing(false); corners.clearLayers();
-  // the region must hold data of the selected city; if it holds another city's data instead, switch to that city
-  const found = await api("/api/locate", { geometry: geometry() });
-  const cur = $("city").value, h = $("drawhint"), here = found.find(c => c.pid === cur);
-  if (here) { h.textContent = `Region set: ${here.pixels.toLocaleString()} pixels of ${cur}. Explain it, run a scenario on it, or ask about it.`; return; }
-  h.classList.add("warn");
-  if (found.length) {
-    $("city").value = found[0].pid;
-    await selectCity(true);
-    h.textContent = `Your region has no data of ${cur}, so the map switched to ${found[0].pid} (${found[0].pixels.toLocaleString()} pixels inside the region).`;
-    h.classList.add("warn");
-  } else {
-    h.textContent = `Your region holds no data of any of the ${meta.cities.length} cities. Data exist only in the coloured image around each orange dot (about 8 × 8 km): zoom to one and draw on its image.`;
-    status("This region has no data: draw on a city's coloured image.", true);
-  }
+async function choosePlace(p) {
+  place = p;
+  $("search").value = p.label;
+  $("date").innerHTML = p.images.map(m => `<option value="${m.pid}">${fmtDate(m.date)} · ${m.sensor}</option>`).join("");
+  $("daterow").hidden = p.images.length < 2;
+  dots.eachLayer(d => d.setStyle({ radius: 6, fillOpacity: .9, weight: 1 }));
+  p.dot.setStyle({ radius: 10, fillOpacity: 0, weight: 2 });
+  await openImage(p.images[0].pid);
 }
-$("finish").onclick = () => { if (drawing && pts.length >= 3) finishRegion().catch(() => {}); else hint(); };
-$("clear").onclick = () => { clearShape(); status(""); };
-$("city").onchange = () => selectCity();
-$("layer").onchange = loadLayer;
+async function openImage(id) {
+  pid = id; clearSpot();
+  $("dlPred").href = `/api/export/${pid}/pred.tif`; $("dlAttr").href = `/api/export/${pid}/attr.tif`;
+  summary = await api(`/api/summary/${pid}`);
+  const s = summary;
+  $("placecard").innerHTML = `<div class="card">
+      <div class="small">${esc(fmtDate(s.date))} · ${esc(s.climate)} climate · ${esc(s.area_km2)} km² with data</div>
+      <div class="stats">
+        <div>Typical ground temperature<b>${s.typical_c} °C</b></div>
+        <div>Hottest 5 % / coolest 5 %<b><span class="hot">${s.hottest_c}</span> / <span class="cool">${s.coolest_c}</span> °C</b></div>
+        <div>Buildings and pavement<b>${s.built_pct} % of ground</b></div>
+        <div>Green areas<b>${s.green_pct} % of ground</b></div>
+      </div>
+      <div class="small" style="margin-top:6px">Model accuracy here: off by ${s.model_error_c} °C on average${s.tested
+        ? " (this image was <b>not</b> used to train the model)" : " (this image was used to train the model)"}.</div></div>`;
+  enable("s2", "s3", "s5"); disable("s4");
+  if (layerName === "delta") layerName = "hotspots";
+  await showLayer(layerName);
+  map.fitBounds(overlay.getBounds(), { maxZoom: 14 });
+  setChips();
+}
+
+// ---- 2. layers -------------------------------------------------------------------------------------------------
+async function showLayer(name, given) {
+  layerName = name;
+  document.querySelectorAll("[data-layer]").forEach(b => b.classList.toggle("on", b.dataset.layer === name));
+  const L_ = given || await api(`/api/layer/${pid}/${name}`);
+  if (overlay) map.removeLayer(overlay);
+  overlay = L.imageOverlay(L_.url, L_.bounds, { opacity: +$("opacity").value }).addTo(map);
+  if (spotCircle) spotCircle.bringToFront();
+  const fmt = v => Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(2);
+  $("legend").innerHTML = L_.colors.length ? `<div class="small" style="margin-top:8px"><b>${esc(L_.label)}</b>${L_.unit ? " (" + esc(L_.unit) + ")" : ""}</div>
+      <div class="bar" style="background:linear-gradient(90deg,${L_.colors.join(",")})"></div>
+      <div class="ends"><span>${esc(L_.low)} ${fmt(L_.vmin)}</span><span>${fmt(L_.vmax)} ${esc(L_.high)}</span></div>`
+    : `<div class="small" style="margin-top:8px"><b>${esc(L_.label)}</b></div>`;
+}
 $("opacity").oninput = () => overlay && overlay.setOpacity(+$("opacity").value);
-$("preset").onchange = setPreset;
 
-async function busy(btn, fn) {
-  btn.disabled = true;
-  try { if (drawing && pts.length >= 3) await finishRegion(); await fn(); }   // forgot Finish: use the corners so far
-  catch (e) {} finally { btn.disabled = false; }
+// ---- 3. spot ---------------------------------------------------------------------------------------------------
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  radius = +b.dataset.r;
+  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+  if (spot) explainSpot(spot.lat, spot.lng);
+});
+map.on("click", e => { if (pid && overlay && overlay.getBounds().contains(e.latlng)) explainSpot(e.latlng.lat, e.latlng.lng);
+                       else if (pid) status("Click inside the coloured image of the city.", true); });
+$("hottest").onclick = () => { const s = summary.spots.hottest; map.panTo([s.lat, s.lng]); explainSpot(s.lat, s.lng); };
+$("coolest").onclick = () => { const s = summary.spots.coolest; map.panTo([s.lat, s.lng]); explainSpot(s.lat, s.lng); };
+function clearSpot() {
+  spot = null; if (spotCircle) map.removeLayer(spotCircle); spotCircle = null;
+  ["spotcard", "whatifcard"].forEach(id => $(id).innerHTML = ""); $("answercard").hidden = true;
+  document.querySelectorAll("[data-preset]").forEach(b => b.classList.remove("on"));
 }
-$("explain").onclick = () => busy($("explain"), async () => {
-  const r = await api("/api/explain", { pid: $("city").value, geometry: geometry() });
-  const { top_factors, ...facts } = r.facts;
-  fillFacts($("facts"), facts);
-  const m = Math.max(...r.factors.map(f => Math.abs(f.mean_c)), 1e-3);
-  $("bars").innerHTML = `<div class="sub">Contribution to the predicted anomaly (°C per pixel)</div>` + r.factors.map(f => {
-    const w = 50 * Math.abs(f.mean_c) / m, left = f.mean_c >= 0 ? 50 : 50 - w;
-    return `<div><span>${f.feature}</span><span class="track"><span class="zero"></span><span style="left:${left}%;width:${w}%;background:${f.mean_c >= 0 ? "var(--accent)" : "var(--cool)"}"></span></span><b>${f.mean_c >= 0 ? "+" : ""}${f.mean_c.toFixed(2)}</b></div>`;
-  }).join("");
-  (r.layers || []).forEach(l => addExtra({ ...l, name: l.name + "_region", label: l.label.replace("hottest 10 %", "drawn region") }));
-});
-$("run").onclick = () => busy($("run"), async () => {
-  const changes = Object.fromEntries(LEVERS.map(l => [l, +$("lv_" + l).value]).filter(([, v]) => v !== 0));
-  const r = await api("/api/scenario", { pid: $("city").value, geometry: geometry(), name: $("preset").value, changes });
-  addExtra(r.layer); $("layer").value = "delta"; show(r.layer);
-  fillFacts($("scstats"), { "mean ΔLST in region": r.stats.mean_inside_c.toFixed(2) + " °C",
-    "range in region": `${r.stats.min_inside_c.toFixed(2)} … ${r.stats.max_inside_c.toFixed(2)} °C`,
-    "mean ΔLST outside": r.stats.mean_outside_c.toFixed(3) + " °C", "pixels changed": r.stats.pixels_inside });
-});
-$("ask").onclick = () => busy($("ask"), async () => {
-  const r = await api("/api/ask", { question: $("q").value, pid: $("city").value, geometry: geometry() });
-  $("answer").textContent = r.answer;
-  $("sources").textContent = (r.mode === "claude" ? "Answer by Claude · " : "Offline answer (no Claude credentials) · ")
-    + "Sources: " + r.sources.map(s => `[${s.n}] ${s.title}`).join("; ");
-});
-const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+async function explainSpot(lat, lng) {
+  const r = await api("/api/spot", { pid, lat, lng, radius_m: radius });
+  clearSpot(); spot = { lat, lng };
+  spotCircle = L.circle([lat, lng], { radius, color: "#111", weight: 2, fill: false, dashArray: "5 4" }).addTo(map);
+  const f = r.facts, d = f.measured_vs_typical_c;
+  const word = Math.abs(d) < 0.3 ? "about as warm as" : d > 0 ? `<span class="hot">${signed(d)} hotter</span> than` : `<span class="cool">${signed(d).replace("−", "")} cooler</span> than`;
+  const shown = r.reasons.filter(x => Math.abs(x.effect_c) >= 0.01).slice(0, 6);
+  const m = Math.max(...shown.map(x => Math.abs(x.effect_c)), 1e-3);
+  $("spotcard").innerHTML = `<div class="card">
+      <div class="sentence">The ground here is <b>${f.measured_surface_c} °C</b>, ${word} the city's typical ${f.city_typical_surface_c} °C.</div>
+      <div class="small">The model estimates <b>${signed(f.model_vs_typical_c)}</b> for this circle. Starting from an average
+        place (${signed(f.average_place_c)}), these push it up (orange) or down (blue):</div>
+      <div class="bars">${shown.map(x => {
+        const w = 50 * Math.abs(x.effect_c) / m, left = x.effect_c >= 0 ? 50 : 50 - w;
+        return `<div><span>${esc(x.label)}</span><span class="track"><span class="zero"></span><span style="left:${left}%;width:${w}%;background:${x.effect_c >= 0 ? "var(--hot)" : "var(--cool)"}"></span></span><b>${signed(x.effect_c, 2)}</b></div>`;
+      }).join("") || '<div class="small">No factor stands out here.</div>'}</div>
+      <div class="small">"Heat seen on other days" means this spot was also hot (or cool) in other satellite images.</div></div>`;
+  enable("s4"); setChips();
+}
+
+// ---- 4. what if ------------------------------------------------------------------------------------------------
+async function whatIf(key) {
+  if (!spot) return;
+  const r = await api("/api/whatif", { pid, lat: spot.lat, lng: spot.lng, radius_m: radius, preset: key });
+  document.querySelectorAll("[data-preset]").forEach(b => b.classList.toggle("on", b.dataset.preset === key));
+  const s = r.stats, v = s.mean_c;
+  const word = Math.abs(v) < 0.02 ? "would barely change (less than 0.02 °C)" : v < 0 ? `would be about <span class="cool">${Math.abs(v).toFixed(2)} °C cooler</span>` : `would be about <span class="hot">${v.toFixed(2)} °C hotter</span>`;
+  $("whatifcard").innerHTML = `<div class="card"><div class="sentence"><b>${esc(r.label)}</b>: the ground in the circle ${word} on average.</div>
+      <div class="small">Range inside the circle: ${signed(s.most_cooling_c, 2)} to ${signed(s.most_warming_c, 2)}. The map now shows the change
+      (blue = cooler, red = hotter). Real changes were about twice as large in past satellite data, so treat this as a lower estimate.</div>
+      <div class="row"><button onclick="showLayer('hotspots')">Back to hot and cool spots</button></div></div>`;
+  await showLayer("delta", r.layer);
+}
+
+// ---- 5. ask ----------------------------------------------------------------------------------------------------
+function setChips() {
+  const qs = !pid ? ["What is land surface temperature?", "What does NDVI mean?"]
+    : spot ? ["Why is this spot hot?", "Would trees help here?", "How sure is the model?"]
+    : ["Which parts of this place are hottest?", "What does NDBI mean?", "Is this the air temperature?"];
+  $("chips").innerHTML = "";
+  qs.forEach(q => $("chips").append(button(q, () => { $("q").value = q; ask(); })));
+}
+async function ask() {
+  const q = $("q").value.trim(); if (!q) return;
+  $("ask").disabled = true;
+  try {
+    const r = await api("/api/ask", { question: q, pid, lat: spot?.lat ?? null, lng: spot?.lng ?? null, radius_m: radius });
+    $("answer").textContent = r.answer;
+    $("sources").textContent = (r.mode === "claude" ? "Written by AI (Claude) from the model's numbers." : "Answer from the project's own notes.")
+      + (r.sources.length ? " Based on: " + r.sources.map(s => s.title).join("; ") : "");
+    $("answercard").hidden = false;
+  } catch (e) {} finally { $("ask").disabled = false; }
+}
+$("ask").onclick = ask;
+$("q").onkeydown = e => { if (e.key === "Enter") ask(); };
+
+// ---- about the model -------------------------------------------------------------------------------------------
 function table(rows, cols) {
   return `<div class="tablewrap"><table><tr>${cols.map(([, h, num]) => `<th class="${num ? "num" : ""}">${h}</th>`).join("")}</tr>` +
-    rows.map(r => `<tr>${cols.map(([k, , num, f]) => `<td class="${num ? "num" : ""}">${esc(f ? f(r[k], r) : r[k])}</td>`).join("")}</tr>`).join("") +
-    `</table></div>`;
+    rows.map(r => `<tr>${cols.map(([k, , num, f]) => `<td class="${num ? "num" : ""}">${esc(f ? f(r[k], r) : r[k])}</td>`).join("")}</tr>`).join("") + `</table></div>`;
 }
-const n2 = v => v == null ? "–" : (+v).toFixed(2), n3 = v => v == null ? "–" : (v >= 0 ? "+" : "") + (+v).toFixed(3);
-let ins = null;
-function importanceBars() {
-  const rows = ins.importance[$("climate").value].slice().sort((a, b) => b.share_pct - a.share_pct);
-  const m = Math.max(...rows.map(r => r.share_pct));
-  $("impBars").innerHTML = rows.map(r => `<div><span>${esc(r.feature)}</span><span class="track"><span style="left:0;width:${100 * r.share_pct / m}%;background:var(--accent)"></span></span><b>${r.share_pct.toFixed(1)} %</b></div>`).join("");
+let about = null;
+async function openAbout() {
+  $("about").classList.add("open");
+  if (about) return;
+  about = await api("/api/insights");
+  if (!about.available) { $("aboutBody").textContent = about.message; return; }
+  const imp = about.importance.all.slice().sort((a, b) => b.share_pct - a.share_pct), m = imp[0].share_pct;
+  const acc = about.accuracy?.[0];
+  $("aboutBody").innerHTML = `<p>A small neural network (${esc(about.model)}) predicts how much hotter or cooler each 60 m patch of
+      ground is than its city's typical value, from satellite measurements of greenery, buildings, water, surface materials
+      and past heat. ${acc ? `On places it never saw during training it is off by <b>${acc.mae.toFixed(1)} °C</b> on average and explains
+      <b>${Math.round(100 * acc.r2)} %</b> of the differences.` : ""}</p>
+    <h3>Main findings</h3><ul>${about.findings.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+    <h3>What the model relies on (all test places)</h3>
+    <div class="bars">${imp.map(r => `<div><span>${esc(r.label)}</span><span class="track"><span style="left:0;width:${100 * r.share_pct / m}%;background:var(--accent)"></span></span><b>${r.share_pct.toFixed(0)} %</b></div>`).join("")}</div>
+    ${about.accuracy ? `<h3>Accuracy by climate and satellite</h3>` + table(about.accuracy, [["group", "Group"], ["mae", "Off by (°C)", 1, v => v.toFixed(2)], ["r2", "Explained", 1, v => Math.round(100 * v) + " %"]]) : ""}
+    ${about.efficiency ? `<details><summary>Model size and speed (Member 3)</summary>` + table(about.efficiency, [["model", "Model"], ["MAE / RMSE / R²", "MAE / RMSE / R²"], ["Params", "Parameters", 1], ["CPU ms / patch (PyTorch / ONNX / INT8)", "CPU ms per patch", 1]]) + `</details>` : ""}
+    <p class="small">${esc(about.note)}</p>`;
 }
-async function openInsights() {
-  $("insights").classList.add("open");
-  if (ins) return;
-  ins = await api("/api/insights");
-  if (!ins.available) { $("insightsBody").textContent = ins.message; return; }
-  let h = `<p class="sub">${esc(ins.model)} · ${esc(ins.note)}</p><h2>Key findings</h2><ul>${ins.findings.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`;
-  h += `<h2>What the model relies on</h2><p class="sub">Share of mean |attribution| (integrated gradients) per input group.</p>
-        <select id="climate" aria-label="Climate">${Object.keys(ins.importance).map(c => `<option>${esc(c)}</option>`).join("")}</select>
-        <div class="bars" id="impBars"></div>`;
-  if (ins.comparison) {
-    const by = {};
-    ins.comparison.forEach(r => { (by[r.feature] ||= { feature: r.feature })[r.model.startsWith("student") ? "s" : "t"] = r; });
-    const rows = Object.values(by).sort((a, b) => (b.s?.share_pct ?? 0) - (a.s?.share_pct ?? 0));
-    h += `<h2>Small model vs Member 2's model</h2><p class="sub">Direction: °C per +1 std of the input at a pixel (&gt; 0: higher value, hotter).</p>` +
-      table(rows, [["feature", "Input"], ["s", "Share small", 1, v => v ? v.share_pct.toFixed(1) + " %" : "–"],
-        ["t", "Share M2", 1, v => v ? v.share_pct.toFixed(1) + " %" : "–"], ["s", "Dir. small", 1, v => n3(v?.direction)],
-        ["t", "Dir. M2", 1, v => n3(v?.direction)]]);
-  }
-  if (ins.responses) h += `<h2>One factor at a time</h2><p class="sub">Change inside the central 32 × 32 block of every test city.</p>` +
-    table(ins.responses, [["model", "Model"], ["change", "Change"], ["mean_dlst_c", "Mean ΔLST °C", 1, n3],
-      ["cities_cooling", "Cities cooler", 1, v => Math.round(100 * v) + " %"]]);
-  if (ins.accuracy) h += `<h2>Test accuracy</h2>` +
-    table(ins.accuracy, [["group", "Group"], ["r2", "R²", 1, n2], ["mae", "MAE °C", 1, n2], ["n", "Pixels", 1, v => (+v).toLocaleString()]]);
-  if (ins.efficiency) h += `<h2>Accuracy vs cost (Member 3)</h2>` +
-    table(ins.efficiency, [["model", "Model"], ["MAE / RMSE / R²", "MAE / RMSE / R²"], ["Params", "Params", 1], ["MFLOPs / patch", "MFLOPs", 1],
-      ["CPU ms / patch (PyTorch / ONNX / INT8)", "CPU ms (PT / ONNX / INT8)", 1]]);
-  $("insightsBody").innerHTML = h;
-  $("climate").onchange = importanceBars;
-  importanceBars();
-}
-$("openInsights").onclick = () => openInsights().catch(() => {});
-$("closeInsights").onclick = () => $("insights").classList.remove("open");
+$("openAbout").onclick = () => openAbout().catch(() => {});
+$("closeAbout").onclick = () => $("about").classList.remove("open");
 init();
 </script>
 </body>
