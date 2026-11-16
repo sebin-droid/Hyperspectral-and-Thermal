@@ -174,6 +174,23 @@ class Workspace:
             raise HTTPException(400, "the drawn region holds no valid pixels of this city")
         return where
 
+    def locate(self, geometry):
+        """Cities with valid pixels inside a drawn polygon, most pixels first: [{pid, pixels}]. A city's grid can be
+        much larger than its valid data, so the bounding box alone does not tell."""
+        ring = np.asarray(geometry["coordinates"][0], float)
+        (w, s), (e, n) = ring.min(0), ring.max(0)
+        out = []
+        for pid, i in self.info.items():
+            bw, bs, be, bn = i["bounds"]
+            if bw > e or be < w or bs > n or bn < s:
+                continue
+            with h5py.File(self.h5, "r") as f:
+                valid = f["pairs"][pid]["valid"][:].astype(bool)
+            k = int((engine.region_mask(geometry, self.h5, pid) & valid).sum())
+            if k:
+                out.append(dict(pid=pid, pixels=k, split=i["split"]))
+        return sorted(out, key=lambda r: (-r["pixels"], r["split"] != "test"))
+
     def explain(self, pid, geometry=None):
         """Facts about a region (default: whole city): predicted vs observed anomaly and the factors behind it."""
         self._check(pid)
@@ -290,6 +307,7 @@ def create_app(h5=None, run_dir=None, model=None, device="cpu"):
     def cities():
         return dict(model=ws.run, presets=PRESETS, layers={k: v[0] for k, v in STYLE.items() if k != "delta"},
                     cities=[dict(pid=p, **{k: v for k, v in i.items() if k != "bounds"},
+                                 box=[[i["bounds"][1], i["bounds"][0]], [i["bounds"][3], i["bounds"][2]]],
                                  center=[(i["bounds"][1] + i["bounds"][3]) / 2, (i["bounds"][0] + i["bounds"][2]) / 2])
                             for p, i in sorted(ws.info.items(), key=lambda x: (x[1]["split"] != "test", x[0]))])
 
@@ -306,6 +324,13 @@ def create_app(h5=None, run_dir=None, model=None, device="cpu"):
         path = ws.export(pid, kind)
         return FileResponse(path, media_type="image/tiff", filename=f"{pid}_{kind}.tif",
                             background=BackgroundTask(os.remove, path))
+
+    class Area(BaseModel):
+        geometry: dict
+
+    @app.post("/api/locate")
+    def locate(a: Area):
+        return ws.locate(a.geometry)
 
     @app.post("/api/explain")
     def explain(r: Region):

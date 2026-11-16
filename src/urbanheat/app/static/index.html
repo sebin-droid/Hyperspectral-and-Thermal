@@ -39,7 +39,12 @@
   .status { font-size: 12px; color: var(--muted); min-height: 18px; }
   button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .leaflet-container.drawing { cursor: crosshair; }
-  #drawhint.on { color: var(--accent); font-weight: 600; }
+  #drawhint.on, #drawhint.warn { color: var(--accent); font-weight: 600; }
+  #toast { position: fixed; top: 14px; left: calc(360px + (100vw - 360px) / 2); transform: translateX(-50%); z-index: 1100;
+           max-width: min(560px, calc(100vw - 400px)); background: var(--ink); color: var(--panel); padding: 8px 14px;
+           border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.3); display: none; }
+  #toast.show { display: block; } #toast.err { background: #b91c1c; color: #fff; }
+  @media (max-width: 760px) { #toast { left: 50%; max-width: calc(100vw - 32px); } }
   a.btn { display: block; text-align: center; text-decoration: none; font-size: 12px; color: var(--ink);
           border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
   #insights { position: fixed; top: 16px; right: 16px; bottom: 16px; width: min(600px, calc(100vw - 32px)); z-index: 1000;
@@ -96,6 +101,7 @@
     estimates learned from data, not proof of cause. Scenario responses are about half the observed size.</div>
 </aside>
 <div id="map"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <section id="insights" aria-label="Model insights">
   <button class="secondary close" id="closeInsights">Close</button>
   <h1>Model insights</h1>
@@ -107,14 +113,21 @@ const LEVERS = ["NDVI", "NDBI", "MNDWI", "built_share"];
 const map = L.map("map").setView([20, 0], 2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "&copy; OpenStreetMap" }).addTo(map);
 let meta, overlay = null, pts = [], drawing = false, shape = null, extra = {};
-const corners = L.layerGroup().addTo(map);
+const corners = L.layerGroup().addTo(map), cityDots = L.layerGroup().addTo(map);
+let toastTimer;
 
-const status = t => $("status").textContent = t || "";
+function status(t, err = false) {                 // message over the map, so it is seen wherever the sidebar is scrolled
+  $("status").textContent = t || "";
+  clearTimeout(toastTimer);
+  $("toast").textContent = t || "";
+  $("toast").className = t ? "show" + (err ? " err" : "") : "";
+  if (t && err) toastTimer = setTimeout(() => $("toast").className = "", 9000);
+}
 async function api(path, body) {
-  status("working…");
+  status("Working…");
   const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
   const j = await r.json().catch(() => ({ detail: `${r.status} ${r.statusText}` }));
-  status(r.ok ? "" : (j.detail || "error"));
+  if (r.ok) status(""); else status(j.detail || "error", true);
   if (!r.ok) throw new Error(j.detail);
   return j;
 }
@@ -137,7 +150,6 @@ async function loadLayer() {
 }
 function geometry() {
   if (pts.length < 3) return null;
-  if (drawing) { setDrawing(false); corners.clearLayers(); }   // forgot Finish: use the corners drawn so far
   return { type: "Polygon", coordinates: [[...pts, pts[0]].map(p => [p.lng, p.lat])] };
 }
 function fillFacts(el, obj) {
@@ -161,13 +173,23 @@ async function init() {
   for (const k of Object.keys(meta.presets)) $("preset").add(new Option(k.replace("_to_", " → ").replace(/_/g, " "), k));
   $("preset").add(new Option("custom", "custom"));
   setPreset();
+  // one dot per city: the model only has data inside these ~8 km squares; click a dot to open that city
+  for (const c of meta.cities) {
+    c.dot = L.circleMarker(c.center, { radius: 5, color: "#7c2d12", weight: 1, fillColor: "#f97316", fillOpacity: 0.9 })
+      .bindTooltip(`${c.pid} · ${c.climate} · ${c.split}`)
+      .on("click", () => { if (!drawing) { $("city").value = c.pid; selectCity(); } })
+      .addTo(cityDots);
+  }
   await selectCity();
 }
-async function selectCity() {
+async function selectCity(keepRegion = false) {
   const c = meta.cities.find(c => c.pid === $("city").value);
-  map.setView(c.center, 12);
+  meta.cities.forEach(o => o.dot.setStyle(o === c ? { radius: 9, color: "#111", weight: 2, fillOpacity: 0 } : { radius: 5, color: "#7c2d12", weight: 1, fillOpacity: 0.9 }));
+  if (keepRegion) map.fitBounds(L.latLngBounds(c.box).extend(shape.getBounds()), { maxZoom: 13 });
+  else map.setView(c.center, 12);
   $("dlPred").href = `/api/export/${c.pid}/pred.tif`; $("dlAttr").href = `/api/export/${c.pid}/attr.tif`;
-  clearShape(); extra = {};
+  if (!keepRegion) clearShape();
+  extra = {};
   [...$("layer").options].filter(o => !(o.value in meta.layers)).forEach(o => o.remove());
   ["facts", "bars", "scstats", "answer", "sources"].forEach(id => $(id).innerHTML = "");
   await loadLayer();
@@ -175,6 +197,7 @@ async function selectCity() {
 function hint() {
   const h = $("drawhint");
   h.classList.toggle("on", drawing);
+  h.classList.remove("warn");
   h.textContent = drawing
     ? (pts.length < 3 ? `Drawing: ${pts.length} corner${pts.length === 1 ? "" : "s"}. Click at least 3 points on the map.`
                       : `Drawing: ${pts.length} corners. Click more, or press Finish.`)
@@ -199,14 +222,35 @@ map.on("click", e => {
   hint();
 });
 $("draw").onclick = () => { clearShape(); setDrawing(true); };
-$("finish").onclick = () => { if (drawing && pts.length >= 3) { setDrawing(false); corners.clearLayers(); } else hint(); };
+async function finishRegion() {
+  setDrawing(false); corners.clearLayers();
+  // the region must hold data of the selected city; if it holds another city's data instead, switch to that city
+  const found = await api("/api/locate", { geometry: geometry() });
+  const cur = $("city").value, h = $("drawhint"), here = found.find(c => c.pid === cur);
+  if (here) { h.textContent = `Region set: ${here.pixels.toLocaleString()} pixels of ${cur}. Explain it, run a scenario on it, or ask about it.`; return; }
+  h.classList.add("warn");
+  if (found.length) {
+    $("city").value = found[0].pid;
+    await selectCity(true);
+    h.textContent = `Your region has no data of ${cur}, so the map switched to ${found[0].pid} (${found[0].pixels.toLocaleString()} pixels inside the region).`;
+    h.classList.add("warn");
+  } else {
+    h.textContent = `Your region holds no data of any of the ${meta.cities.length} cities. Data exist only in the coloured image around each orange dot (about 8 × 8 km): zoom to one and draw on its image.`;
+    status("This region has no data: draw on a city's coloured image.", true);
+  }
+}
+$("finish").onclick = () => { if (drawing && pts.length >= 3) finishRegion().catch(() => {}); else hint(); };
 $("clear").onclick = () => { clearShape(); status(""); };
-$("city").onchange = selectCity;
+$("city").onchange = () => selectCity();
 $("layer").onchange = loadLayer;
 $("opacity").oninput = () => overlay && overlay.setOpacity(+$("opacity").value);
 $("preset").onchange = setPreset;
 
-async function busy(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) {} finally { btn.disabled = false; } }
+async function busy(btn, fn) {
+  btn.disabled = true;
+  try { if (drawing && pts.length >= 3) await finishRegion(); await fn(); }   // forgot Finish: use the corners so far
+  catch (e) {} finally { btn.disabled = false; }
+}
 $("explain").onclick = () => busy($("explain"), async () => {
   const r = await api("/api/explain", { pid: $("city").value, geometry: geometry() });
   const { top_factors, ...facts } = r.facts;

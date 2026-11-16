@@ -127,3 +127,11 @@ def test_export_geotiffs(client, tmp_path):
         with rasterio.open(tmp_path / "x.tif") as t:
             assert t.descriptions[0] == first
     assert client.get(f"/api/export/{pid}/nope.tif").status_code == 404
+
+
+def test_locate_finds_cities_with_data_in_a_region(client):
+    found = client.post("/api/locate", json={"geometry": SQUARE}).json()
+    assert {f["pid"] for f in found} == {"EMIT_0", "EMIT_1", "EMIT_2", "EMIT_3"}       # all fake pairs share one grid
+    assert all(f["pixels"] == 100 for f in found) and found[0]["split"] == "test"
+    far = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
+    assert client.post("/api/locate", json={"geometry": far}).json() == []
