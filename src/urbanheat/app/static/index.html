@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Urban Heat Dashboard</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -36,6 +37,9 @@
   .bars .zero { position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--muted); }
   .answer { white-space: pre-wrap; font-size: 13px; margin-top: 8px; } .mode { font-size: 11px; color: var(--muted); }
   .status { font-size: 12px; color: var(--muted); min-height: 18px; }
+  button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .leaflet-container.drawing { cursor: crosshair; }
+  #drawhint.on { color: var(--accent); font-weight: 600; }
   a.btn { display: block; text-align: center; text-decoration: none; font-size: 12px; color: var(--ink);
           border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
   #insights { position: fixed; top: 16px; right: 16px; bottom: 16px; width: min(600px, calc(100vw - 32px)); z-index: 1000;
@@ -66,7 +70,7 @@
   <div class="row"><a class="btn" id="dlPred" download>Prediction GeoTIFF</a><a class="btn" id="dlAttr" download>Attribution GeoTIFF</a></div>
 
   <h2>Region</h2>
-  <p class="sub">Click on the map to add corners, then press Finish. No region means the whole city.</p>
+  <p class="sub" id="drawhint" role="status">Press Draw, click the corners on the map, then press Finish. No region means the whole city.</p>
   <div class="row"><button id="draw" class="secondary">Draw</button><button id="finish" class="secondary">Finish</button>
     <button id="clear" class="secondary">Clear</button></div>
 
@@ -103,6 +107,7 @@ const LEVERS = ["NDVI", "NDBI", "MNDWI", "built_share"];
 const map = L.map("map").setView([20, 0], 2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "&copy; OpenStreetMap" }).addTo(map);
 let meta, overlay = null, pts = [], drawing = false, shape = null, extra = {};
+const corners = L.layerGroup().addTo(map);
 
 const status = t => $("status").textContent = t || "";
 async function api(path, body) {
@@ -131,7 +136,9 @@ async function loadLayer() {
   try { show(await api(`/api/layer/${$("city").value}/${name}`)); } catch (e) {}
 }
 function geometry() {
-  return shape ? { type: "Polygon", coordinates: [[...pts, pts[0]].map(p => [p.lng, p.lat])] } : null;
+  if (pts.length < 3) return null;
+  if (drawing) { setDrawing(false); corners.clearLayers(); }   // forgot Finish: use the corners drawn so far
+  return { type: "Polygon", coordinates: [[...pts, pts[0]].map(p => [p.lng, p.lat])] };
 }
 function fillFacts(el, obj) {
   el.innerHTML = Object.entries(obj).map(([k, v]) => `<div><span>${k.replace(/_/g, " ")}</span><b>${v}</b></div>`).join("");
@@ -165,16 +172,34 @@ async function selectCity() {
   ["facts", "bars", "scstats", "answer", "sources"].forEach(id => $(id).innerHTML = "");
   await loadLayer();
 }
-function clearShape() { if (shape) map.removeLayer(shape); shape = null; pts = []; drawing = false; }
+function hint() {
+  const h = $("drawhint");
+  h.classList.toggle("on", drawing);
+  h.textContent = drawing
+    ? (pts.length < 3 ? `Drawing: ${pts.length} corner${pts.length === 1 ? "" : "s"}. Click at least 3 points on the map.`
+                      : `Drawing: ${pts.length} corners. Click more, or press Finish.`)
+    : shape ? `Region set (${pts.length} corners). Explain it, run a scenario on it, or ask about it.`
+            : "Press Draw, click the corners on the map, then press Finish. No region means the whole city.";
+}
+function setDrawing(on) {
+  drawing = on;
+  $("draw").classList.toggle("active", on);
+  map.getContainer().classList.toggle("drawing", on);
+  if (shape) shape.setStyle(on ? { dashArray: "4 3", fill: false } : { dashArray: null, fill: true, fillOpacity: 0.08 });
+  hint();
+}
+function clearShape() { if (shape) map.removeLayer(shape); shape = null; pts = []; corners.clearLayers(); setDrawing(false); }
 
 map.on("click", e => {
   if (!drawing) return;
   pts.push(e.latlng);
+  L.circleMarker(e.latlng, { radius: 4, color: "#111", weight: 2, fillColor: "#fff", fillOpacity: 1 }).addTo(corners);
   if (shape) map.removeLayer(shape);
   shape = L.polygon(pts, { color: "#111", weight: 2, fill: false, dashArray: "4 3" }).addTo(map);
+  hint();
 });
-$("draw").onclick = () => { clearShape(); drawing = true; status("click corners on the map, then Finish"); };
-$("finish").onclick = () => { drawing = false; if (pts.length < 3) { clearShape(); status("need at least 3 corners"); } else status(""); };
+$("draw").onclick = () => { clearShape(); setDrawing(true); };
+$("finish").onclick = () => { if (drawing && pts.length >= 3) { setDrawing(false); corners.clearLayers(); } else hint(); };
 $("clear").onclick = () => { clearShape(); status(""); };
 $("city").onchange = selectCity;
 $("layer").onchange = loadLayer;
