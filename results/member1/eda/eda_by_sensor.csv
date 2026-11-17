@@ -1,0 +1,4 @@
+sensor,pairs,cells,year_min,year_max,lst_c,ndvi,ndbi,built_share,wc_built,elev_m,rho_lst_ndvi,rho_lst_ndbi,haze_mild,flag_swir1
+EMIT,258,162,2023,2026,36.002,0.423,-0.063,0.127,0.269,221.695,-0.561,0.682,31,52
+ENMAP,31,23,2023,2026,32.946,0.48,-0.117,0.136,0.306,46.804,-0.574,0.665,1,16
+HYPERION,133,106,2013,2016,34.061,0.41,-0.097,0.164,0.384,80.329,-0.558,0.618,12,48

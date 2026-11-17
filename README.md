@@ -64,6 +64,7 @@ object with `predict(batch)` (for example a trivial model that returns the scene
 
 | Notebook | Shows |
 |---|---|
+| [member1/preprocessing](notebooks/member1/preprocessing/README.md) | how the 422 pairs were made: screening, Hyperion / EMIT / EnMAP + Landsat processing, QC v2.3, final dataset ([results](results/member1/README.md)) |
 | [member1/01_thermal_context_qc](notebooks/member1/01_thermal_context_qc.ipynb) | thermal context layer: coverage, observations, match with the target |
 | [member1/02_change](notebooks/member1/02_change.ipynb) | green / built-up / water change 2016–2025 for 281 cities; heat island; warming from green → built (pixel-level) |
 | [member2/01_dataset_overview](notebooks/member2/01_dataset_overview.ipynb) | harmonised dataset: splits, band grid, sensor agreement, variance split, a training patch |

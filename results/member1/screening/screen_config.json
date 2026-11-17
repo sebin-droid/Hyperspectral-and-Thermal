@@ -1,0 +1,21 @@
+{
+  "start_date": "2013-04-01",
+  "end_date": "2026-09-30",
+  "tolerance_days": 15,
+  "sensors": {
+    "HYPERION": [
+      "2013-04-01",
+      "2017-03-31"
+    ],
+    "EMIT": [
+      "2022-08-01",
+      "2026-09-30"
+    ]
+  },
+  "min_clear_frac": 0.85,
+  "tile_width_m": 7700,
+  "n_candidates": 200,
+  "min_settlement_share": 0.5,
+  "sample_region": "India",
+  "seed": 7
+}

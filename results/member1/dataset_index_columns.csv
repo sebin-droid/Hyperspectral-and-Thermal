@@ -1,0 +1,74 @@
+column,meaning
+dataset_id,unique pair ID: SENSOR_pairno
+sensor,"HYPERION, EMIT or ENMAP"
+pair_no,pair number in the sensor's pairs/ archive
+rel_dir,pair folder relative to MEMBER1___PREPROCESSING/
+reflectance_file,"hyperspectral surface reflectance x 10000 (int16, nodata -32768)"
+landsat_file,"Landsat 8/9 on the same grid: blue, green, red, nir, swir1, swir2 (reflectance), LST_K (kelvin), QA_PIXEL or clear_frac"
+aux_file,aux_layers.tif: 12 layers on the same grid (see README)
+res_m,nominal pixel size (m)
+crs,coordinate system of the pair grid
+width,pixels
+height,pixels
+n_bands,hyperspectral bands kept
+scene_id,hyperspectral scene ID
+scene_date,hyperspectral acquisition date
+year,scene year
+month,scene month
+landsat_scene,Landsat scene ID
+landsat_dt_days,Landsat date minus hyperspectral date (days)
+cell_id,screening cell (0.07 deg); split groups are built on it
+cell_lon,cell centre longitude
+cell_lat,cell centre latitude
+profile,screening profile
+koppen_code,Koppen-Geiger class 1991-2020 (Beck et al.)
+climate_group,tropical / arid / temperate / cold / polar
+qc_version,quality-control version (v2.3 for all)
+coverage_joint,share of the cell valid in both sensors
+landsat_clear_frac_qc,Landsat clear share inside the hyperspectral footprint (QC)
+ndvi_r_after,NDVI correlation hyperspectral vs Landsat after alignment
+ndvi_gain,mean hyperspectral NDVI / mean Landsat NDVI over vegetation (haze test)
+aod550,aerosol optical depth at 550 nm
+sun_elev,sun elevation (deg)
+across_offnadir,EnMAP across-track viewing angle (deg; empty for other sensors)
+flag_blue,hyperspectral/Landsat blue ratio outside 0.85-1.15 (flag only)
+flag_red,same for red
+flag_swir1,same for SWIR1
+haze_mild,NDVI gain 0.80-0.85 (slight haze; passed)
+haze_unchecked,too little vegetation for the haze test
+large_shift,alignment shift > 3 px (confirmed)
+ghsl_epoch,GHSL epoch used for built_share
+n_px,pixels in the grid
+n_joint_px,pixels clear in Landsat and valid in the hyperspectral file
+joint_frac,n_joint_px / n_px
+landsat_clear_frac,Landsat clear share of the grid (aux)
+elev_mean,mean SRTM elevation (m)
+slope_mean,mean slope (deg)
+built_share_mean,mean GHSL built-up share (0-1)
+dw_valid_frac,share of pixels with a Dynamic World class
+wc_tree,share of the cell in WorldCover class 'tree'
+wc_shrub,share of the cell in WorldCover class 'shrub'
+wc_grass,share of the cell in WorldCover class 'grass'
+wc_crop,share of the cell in WorldCover class 'crop'
+wc_built,share of the cell in WorldCover class 'built'
+wc_bare,share of the cell in WorldCover class 'bare'
+wc_snow,share of the cell in WorldCover class 'snow'
+wc_water,share of the cell in WorldCover class 'water'
+wc_wetland,share of the cell in WorldCover class 'wetland'
+wc_mangrove,share of the cell in WorldCover class 'mangrove'
+wc_moss,share of the cell in WorldCover class 'moss'
+lst_c_mean,mean LST (deg C) over joint pixels
+lst_c_p10,10th percentile LST (deg C)
+lst_c_p90,90th percentile LST (deg C)
+ndvi_mean,mean Landsat NDVI (joint pixels)
+ndbi_mean,mean Landsat NDBI
+ndwi_mean,mean Landsat NDWI
+ndvi_hs_mean,mean hyperspectral NDVI
+rho_lst_ndvi,Spearman rho LST vs NDVI inside the pair
+rho_lst_ndbi,Spearman rho LST vs NDBI inside the pair
+built_2015,"GHSL built-up share of the cell, 2015"
+built_2020,"GHSL built-up share of the cell, 2020"
+built_growth_pp,built-up change 2015 -> 2020 (percentage points)
+built_growth_large,scene <= 2017 and growth > 10 pp (cell changed after the scene)
+block_1deg,1 x 1 deg block (for a stricter spatial split)
+split,"train / val / test, assigned by cell"
