@@ -56,3 +56,14 @@ def test_factor_and_transform():
         spatial.factor(45, 60)
     t = spatial.transform(Affine(30, 0, 1000, 0, -30, 2000), 2)
     assert (t.a, t.e, t.c, t.f) == (60, -60, 1000, 2000)
+
+
+def test_spectral_indices_stay_in_range():
+    from urbanheat.harmonize.build import spectral_indices
+    opt = np.array([[0.05, 0.05, 0.05], [0.08, 0.08, np.nan], [0.10, 0.0011, 0.1],
+                    [0.30, -0.001, 0.3], [0.20, 0.2, 0.2], [0.15, 0.15, 0.15]], "float32")[:, :, None]
+    ndvi, ndbi, mndwi = spectral_indices(opt)[:, :, 0]
+    assert np.isclose(ndvi[0], 0.5) and np.isclose(ndbi[0], -0.2)   # normal pixel unchanged
+    assert ndvi[1] == -1                                              # (-0.001-0.0011)/(0.0001) -> clipped
+    assert np.isnan(mndwi[2])                                         # missing band stays missing
+    assert np.nanmax(np.abs(spectral_indices(opt))) <= 1

@@ -38,6 +38,18 @@ def sensor_wavelengths(idx):
     return out
 
 
+def spectral_indices(opt):
+    """NDVI, NDBI, MNDWI from the six Landsat bands, clipped to their valid range [-1, 1].
+
+    Without the clip, near-zero denominators (negative reflectance after the block mean) gave values up to
+    |4334| in 0.08 % of pixels, which inflated the NDVI train std from ~0.2 to 3.5.
+    """
+    blue, green, red, nir, swir1, swir2 = opt
+    with np.errstate(invalid="ignore", divide="ignore"):
+        idxs = np.stack([(nir - red) / (nir + red), (swir1 - nir) / (swir1 + nir), (green - swir1) / (green + swir1)])
+    return np.clip(idxs, -1, 1)                             # NaN stays NaN, so the valid mask is unchanged
+
+
 def read_pair(row, tgt_wl, hcfg, context_path):
     """All layers of one pair on the common wavelength grid and `grid_m` pixels, plus the valid mask."""
     cube, desc, (transform, crs) = _read(row.reflectance_path)
@@ -60,10 +72,7 @@ def read_pair(row, tgt_wl, hcfg, context_path):
     lst = spatial.block_mean(lst, f, m)
     landcover = spatial.block_mode(np.nan_to_num(aux[4], nan=0).astype("uint8"), f)
 
-    blue, green, red, nir, swir1, swir2 = opt
-    with np.errstate(invalid="ignore", divide="ignore"):
-        idxs = [(nir - red) / (nir + red), (swir1 - nir) / (swir1 + nir), (green - swir1) / (green + swir1)]
-    ls_in = np.concatenate([opt, np.stack(idxs)]).astype("float32")
+    ls_in = np.concatenate([opt, spectral_indices(opt)]).astype("float32")
 
     valid = (np.isfinite(hs).all(0) & np.isfinite(ls_in).all(0) & np.isfinite(env).all(0) & np.isfinite(lst)
              & np.isfinite(ctx[0]))

@@ -19,7 +19,7 @@ thermal_context:                   # median LST of OTHER Landsat dates, input of
   max_scene_cloud: 70              # scene-level prefilter (%); pixels are masked with QA_PIXEL anyway
 
 harmonize:
-  version: 1                       # output: <processed_dir>/urbanheat_v<version>.h5
+  version: 2                       # output: <processed_dir>/urbanheat_v<version>.h5
   grid_m: 60                       # common pixel size for all sensors (EMIT native); 30 m pairs are 2x2-averaged
   wl_min_nm: 420                   # candidate wavelengths; only those EVERY sensor covers are kept
   wl_max_nm: 2400
